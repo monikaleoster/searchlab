@@ -4,7 +4,7 @@ Each phase is ~1–2 days of work and ships a locally runnable artifact. Every p
 
 ---
 
-## Phase 0 — Scaffold ✅ in progress
+## Phase 0 — Scaffold ✅
 **Deliverable:** `uv run searchlab-eval --help` works.
 
 - `pyproject.toml` with all deps declared
@@ -15,7 +15,7 @@ Each phase is ~1–2 days of work and ships a locally runnable artifact. Every p
 
 ---
 
-## Phase 1 — Dataset download
+## Phase 1 — Dataset download ✅
 **Deliverable:** `searchlab-eval download --dataset scifact` fetches and writes corpus/queries/qrels to `data/scifact/`.
 
 - `downloader.py`: wrap BEIR `GenericDataLoader`
