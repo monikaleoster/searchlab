@@ -52,6 +52,42 @@ def download(dataset: str, slice_n: int) -> None:
         click.echo(f"Downloaded {dataset}: {len(corpus)} docs, {final_q} queries")
 
 
+@cli.command()
+@click.option("--dataset", "-d", required=True, help="BEIR dataset name (e.g. scifact, nfcorpus)")
+@click.option(
+    "--opensearch-url",
+    "-u",
+    default="http://localhost:9200",
+    show_default=True,
+    envvar="OPENSEARCH_URL",
+    help="OpenSearch base URL",
+)
+def ingest(dataset: str, opensearch_url: str) -> None:
+    """Ingest a downloaded BEIR corpus into OpenSearch."""
+    from searchlab_eval.ingestor import get_doc_count, ingest_corpus
+
+    corpus_path = Path("data") / dataset / "corpus.jsonl"
+    if not corpus_path.exists():
+        click.echo(
+            f"Error: corpus not found at {corpus_path} — run download first", err=True
+        )
+        sys.exit(1)
+
+    try:
+        n_ingested = ingest_corpus(corpus_path, opensearch_url)
+    except RuntimeError as exc:
+        click.echo(f"Error: {exc}", err=True)
+        sys.exit(1)
+
+    try:
+        n_count = get_doc_count(opensearch_url)
+    except RuntimeError as exc:
+        click.echo(f"Warning: could not verify doc count: {exc}", err=True)
+        n_count = "?"
+
+    click.echo(f"Ingested {n_ingested} docs into searchlab-v0 (index total: {n_count})")
+
+
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 def _write_queries(data_dir: Path, queries: dict) -> None:
