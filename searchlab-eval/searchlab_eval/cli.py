@@ -1,5 +1,7 @@
 import json
+import shutil
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import click
@@ -86,6 +88,61 @@ def ingest(dataset: str, opensearch_url: str) -> None:
         n_count = "?"
 
     click.echo(f"Ingested {n_ingested} docs into searchlab-v0 (index total: {n_count})")
+
+
+@cli.command()
+@click.option("--dataset", "-d", required=True, help="BEIR dataset name (e.g. scifact, nfcorpus)")
+@click.option("--top-k", "-k", default=10, show_default=True, help="Number of results per query")
+@click.option(
+    "--opensearch-url",
+    "-u",
+    default="http://localhost:9200",
+    show_default=True,
+    envvar="OPENSEARCH_URL",
+    help="OpenSearch base URL",
+)
+@click.option("--run-id", default=None, help="Run identifier (auto-generated if omitted)")
+def query(dataset: str, top_k: int, opensearch_url: str, run_id: str | None) -> None:
+    """Run queries for a downloaded BEIR dataset and write ranked results."""
+    from searchlab_eval.querier import load_queries, run_queries
+
+    if shutil.which("searchlab") is None:
+        click.echo(
+            "Error: 'searchlab' not found on PATH — build the JAR and ensure ./searchlab is executable",
+            err=True,
+        )
+        sys.exit(1)
+
+    queries_path = Path("data") / dataset / "queries.jsonl"
+    if not queries_path.exists():
+        click.echo(
+            f"Error: queries not found at {queries_path} — run download first",
+            err=True,
+        )
+        sys.exit(1)
+
+    queries = load_queries(queries_path)
+
+    if run_id is None:
+        run_id = f"{dataset}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
+
+    results_dir = Path("results") / run_id
+    results_dir.mkdir(parents=True, exist_ok=True)
+
+    results = run_queries(queries, opensearch_url, top_k)
+
+    payload = {
+        "run_id": run_id,
+        "dataset": dataset,
+        "top_k": top_k,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "results": results,
+    }
+
+    out_path = results_dir / "raw_results.json"
+    out_path.write_text(json.dumps(payload, indent=2))
+
+    click.echo(f"Queried {len(queries)} queries → results/{run_id}/raw_results.json")
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────

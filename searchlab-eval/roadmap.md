@@ -24,7 +24,7 @@ Each phase is ~1–2 days of work and ships a locally runnable artifact. Every p
 
 ---
 
-## Phase 2 — Ingest
+## Phase 2 — Ingest ✅
 **Deliverable:** `searchlab-eval ingest --dataset scifact` calls `searchlab ingest` and reports how many docs landed in OpenSearch.
 
 - `ingestor.py`: build ingest CLI args from corpus path, call via `subprocess.run`
@@ -33,7 +33,7 @@ Each phase is ~1–2 days of work and ships a locally runnable artifact. Every p
 
 ---
 
-## Phase 3 — Query
+## Phase 3 — Query ✅
 **Deliverable:** `searchlab-eval query --dataset scifact` runs all sliced queries through `searchlab query` and writes ranked results to `results/<run_id>/raw_results.json`.
 
 - `querier.py`: iterate queries, call `searchlab query "<text>"` per query, parse stdout JSON
