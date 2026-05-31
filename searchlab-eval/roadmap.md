@@ -42,7 +42,7 @@ Each phase is ~1–2 days of work and ships a locally runnable artifact. Every p
 
 ---
 
-## Phase 4 — IR metrics
+## Phase 4 — IR metrics ✅
 **Deliverable:** `searchlab-eval metrics ir --run-id <id>` prints a metrics table and writes `ir_scores.json`.
 
 - `metrics/ir.py`: load `raw_results.json` + qrels, run pytrec_eval for nDCG@{1,3,5,10}, MAP@10, Recall@{5,10}

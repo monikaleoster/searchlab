@@ -145,6 +145,69 @@ def query(dataset: str, top_k: int, opensearch_url: str, run_id: str | None) -> 
     click.echo(f"Queried {len(queries)} queries → results/{run_id}/raw_results.json")
 
 
+@cli.group()
+def metrics() -> None:
+    """Compute evaluation metrics for a completed run."""
+
+
+@metrics.command("ir")
+@click.option("--run-id", "-r", required=True, help="Run identifier (directory name under results/)")
+def metrics_ir(run_id: str) -> None:
+    """Compute IR metrics (nDCG, MAP, Recall) for a completed query run."""
+    from searchlab_eval.metrics.ir import (
+        MEASURES,
+        aggregate,
+        build_pytrec_run,
+        compute_metrics,
+        format_table,
+        load_qrels,
+        load_run,
+    )
+
+    run_path = Path("results") / run_id / "raw_results.json"
+    if not run_path.exists():
+        click.echo(
+            f"Error: run not found at {run_path} — run 'searchlab-eval query' first",
+            err=True,
+        )
+        sys.exit(1)
+
+    _, dataset, results = load_run(run_path)
+
+    qrels_path = Path("data") / dataset / "qrels" / "test.tsv"
+    if not qrels_path.exists():
+        click.echo(
+            f"Error: qrels not found at {qrels_path} — run 'searchlab-eval download' first",
+            err=True,
+        )
+        sys.exit(1)
+
+    qrels = load_qrels(qrels_path)
+    pytrec_run = build_pytrec_run(results)
+    per_query_scores = compute_metrics(pytrec_run, qrels)
+
+    for qid in results:
+        if qid not in per_query_scores:
+            per_query_scores[qid] = {m: 0.0 for m in MEASURES}
+
+    aggregated = aggregate(per_query_scores)
+
+    payload = {
+        "run_id": run_id,
+        "dataset": dataset,
+        "computed_at": datetime.now(timezone.utc).isoformat(),
+        "measures": sorted(MEASURES),
+        "aggregate": aggregated,
+        "per_query": per_query_scores,
+    }
+
+    out_path = Path("results") / run_id / "ir_scores.json"
+    out_path.write_text(json.dumps(payload, indent=2))
+
+    click.echo(format_table(aggregated))
+    click.echo(f"Metrics written to results/{run_id}/ir_scores.json")
+
+
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 def _write_queries(data_dir: Path, queries: dict) -> None:
