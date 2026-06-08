@@ -1,7 +1,27 @@
+# Maven / Java
 target/
-.env
 *.class
-*.log
+*.jar
+*.iml
+
+# Environment / secrets
+.env
+files/keys
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Eval data and results (large generated files)
+searchlab-eval/data/
+searchlab-eval/results/
+eval/results/
+
+# OS / IDE
 .DS_Store
 .idea/
-*.iml
