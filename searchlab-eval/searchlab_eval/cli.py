@@ -1,10 +1,23 @@
 import json
+import os
 import shutil
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
 import click
+
+
+def _resolve_searchlab_bin() -> str | None:
+    """Return the searchlab binary path, checking PATH then the repo root."""
+    on_path = shutil.which("searchlab")
+    if on_path:
+        return on_path
+    # searchlab-eval lives one level below the repo root; the wrapper script sits there
+    candidate = Path(__file__).parent.parent.parent / "searchlab"
+    if candidate.is_file() and os.access(candidate, os.X_OK):
+        return str(candidate)
+    return None
 
 
 @click.group()
@@ -56,6 +69,7 @@ def download(dataset: str, slice_n: int) -> None:
 
 @cli.command()
 @click.option("--dataset", "-d", required=True, help="BEIR dataset name (e.g. scifact, nfcorpus)")
+@click.option("--index", default=None, help="OpenSearch index name (default: searchlab-<dataset>)")
 @click.option(
     "--opensearch-url",
     "-u",
@@ -64,9 +78,11 @@ def download(dataset: str, slice_n: int) -> None:
     envvar="OPENSEARCH_URL",
     help="OpenSearch base URL",
 )
-def ingest(dataset: str, opensearch_url: str) -> None:
+def ingest(dataset: str, index: str | None, opensearch_url: str) -> None:
     """Ingest a downloaded BEIR corpus into OpenSearch."""
     from searchlab_eval.ingestor import get_doc_count, ingest_corpus
+
+    index = index or f"searchlab-{dataset}"
 
     corpus_path = Path("data") / dataset / "corpus.jsonl"
     if not corpus_path.exists():
@@ -76,22 +92,23 @@ def ingest(dataset: str, opensearch_url: str) -> None:
         sys.exit(1)
 
     try:
-        n_ingested = ingest_corpus(corpus_path, opensearch_url)
+        n_ingested = ingest_corpus(corpus_path, opensearch_url, index=index)
     except RuntimeError as exc:
         click.echo(f"Error: {exc}", err=True)
         sys.exit(1)
 
     try:
-        n_count = get_doc_count(opensearch_url)
+        n_count = get_doc_count(opensearch_url, index=index)
     except RuntimeError as exc:
         click.echo(f"Warning: could not verify doc count: {exc}", err=True)
         n_count = "?"
 
-    click.echo(f"Ingested {n_ingested} docs into searchlab-v0 (index total: {n_count})")
+    click.echo(f"Ingested {n_ingested} docs into {index} (index total: {n_count})")
 
 
 @cli.command()
 @click.option("--dataset", "-d", required=True, help="BEIR dataset name (e.g. scifact, nfcorpus)")
+@click.option("--index", default=None, help="OpenSearch index name (default: searchlab-<dataset>)")
 @click.option("--top-k", "-k", default=10, show_default=True, help="Number of results per query")
 @click.option(
     "--opensearch-url",
@@ -102,11 +119,14 @@ def ingest(dataset: str, opensearch_url: str) -> None:
     help="OpenSearch base URL",
 )
 @click.option("--run-id", default=None, help="Run identifier (auto-generated if omitted)")
-def query(dataset: str, top_k: int, opensearch_url: str, run_id: str | None) -> None:
+def query(dataset: str, index: str | None, top_k: int, opensearch_url: str, run_id: str | None) -> None:
     """Run queries for a downloaded BEIR dataset and write ranked results."""
     from searchlab_eval.querier import load_queries, run_queries
 
-    if shutil.which("searchlab") is None:
+    index = index or f"searchlab-{dataset}"
+
+    searchlab_bin = _resolve_searchlab_bin()
+    if searchlab_bin is None:
         click.echo(
             "Error: 'searchlab' not found on PATH — build the JAR and ensure ./searchlab is executable",
             err=True,
@@ -129,7 +149,7 @@ def query(dataset: str, top_k: int, opensearch_url: str, run_id: str | None) -> 
     results_dir = Path("results") / run_id
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    results = run_queries(queries, opensearch_url, top_k)
+    results = run_queries(queries, opensearch_url, top_k, index=index, searchlab_bin=searchlab_bin)
 
     payload = {
         "run_id": run_id,

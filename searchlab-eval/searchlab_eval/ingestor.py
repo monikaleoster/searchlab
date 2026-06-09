@@ -5,11 +5,11 @@ from pathlib import Path
 import requests
 
 
-def _build_bulk_body(docs: list[dict], ingested_at: str) -> str:
+def _build_bulk_body(docs: list[dict], ingested_at: str, index: str) -> str:
     lines: list[str] = []
     for doc in docs:
         doc_id = doc["_id"]
-        lines.append(json.dumps({"index": {"_index": "searchlab-v0", "_id": doc_id}}))
+        lines.append(json.dumps({"index": {"_index": index, "_id": doc_id}}))
         lines.append(json.dumps({
             "chunk_id": doc_id,
             "chunk_text": doc["title"] + " " + doc["text"],
@@ -47,7 +47,7 @@ def _post_bulk(opensearch_url: str, body: str) -> None:
         raise RuntimeError("Bulk request returned errors=true")
 
 
-def ingest_corpus(corpus_path: Path, opensearch_url: str, batch_size: int = 500) -> int:
+def ingest_corpus(corpus_path: Path, opensearch_url: str, index: str, batch_size: int = 500) -> int:
     corpus_path = Path(corpus_path)
     if not corpus_path.exists():
         raise FileNotFoundError(f"Corpus not found: {corpus_path}")
@@ -63,18 +63,18 @@ def ingest_corpus(corpus_path: Path, opensearch_url: str, batch_size: int = 500)
                 continue
             batch.append(json.loads(line))
             if len(batch) >= batch_size:
-                _post_bulk(opensearch_url, _build_bulk_body(batch, ingested_at))
+                _post_bulk(opensearch_url, _build_bulk_body(batch, ingested_at, index))
                 total += len(batch)
                 batch = []
 
     if batch:
-        _post_bulk(opensearch_url, _build_bulk_body(batch, ingested_at))
+        _post_bulk(opensearch_url, _build_bulk_body(batch, ingested_at, index))
         total += len(batch)
 
     return total
 
 
-def get_doc_count(opensearch_url: str, index: str = "searchlab-v0") -> int:
+def get_doc_count(opensearch_url: str, index: str) -> int:
     try:
         resp = requests.get(f"{opensearch_url}/{index}/_count", timeout=10)
     except requests.exceptions.ConnectionError:
