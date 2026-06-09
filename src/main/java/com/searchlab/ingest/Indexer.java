@@ -47,7 +47,7 @@ public class Indexer {
 
             operations.add(BulkOperation.of(op -> op
                     .index(IndexOperation.of(i -> i
-                            .index(IndexBootstrap.INDEX_NAME)
+                            .index(IndexBootstrap.indexName())
                             .id(chunkId)
                             .document(doc)
                     ))

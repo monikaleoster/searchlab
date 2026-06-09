@@ -32,7 +32,7 @@ public class Bm25Searcher {
         );
 
         SearchRequest request = SearchRequest.of(r -> r
-                .index(IndexBootstrap.INDEX_NAME)
+                .index(IndexBootstrap.indexName())
                 .query(matchQuery)
                 .size(topK)
         );

@@ -13,24 +13,30 @@ import java.util.Map;
 public class IndexBootstrap {
 
     private static final Logger log = LoggerFactory.getLogger(IndexBootstrap.class);
-    public static final String INDEX_NAME = "searchlab-v0";
+    public static final String DEFAULT_INDEX_NAME = "searchlab-v0";
+
+    public static String indexName() {
+        String env = System.getenv("SEARCHLAB_INDEX");
+        return (env != null && !env.isBlank()) ? env : DEFAULT_INDEX_NAME;
+    }
 
     public static void ensureIndexExists(OpenSearchClient client) throws IOException {
+        String name = indexName();
         boolean exists = client.indices()
-                .exists(ExistsRequest.of(r -> r.index(INDEX_NAME)))
+                .exists(ExistsRequest.of(r -> r.index(name)))
                 .value();
 
         if (exists) {
-            log.debug("Index '{}' already exists", INDEX_NAME);
+            log.debug("Index '{}' already exists", name);
             return;
         }
 
-        log.info("Creating index '{}'", INDEX_NAME);
+        log.info("Creating index '{}'", name);
         client.indices().create(CreateIndexRequest.of(req -> req
-                .index(INDEX_NAME)
+                .index(name)
                 .mappings(m -> m.properties(buildProperties()))
         ));
-        log.info("Index '{}' created", INDEX_NAME);
+        log.info("Index '{}' created", name);
     }
 
     private static Map<String, Property> buildProperties() {
