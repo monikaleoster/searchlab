@@ -105,6 +105,106 @@ Runs all Phase 0 acceptance checks (ingest, query, idempotency) and exits 0:
 
 ---
 
+## Evaluation (`searchlab-eval`)
+
+`searchlab-eval` is a standalone Python harness that measures search quality against [BEIR](https://github.com/beir-cellar/beir) benchmark datasets. It drives the `searchlab` CLI as a subprocess — no internal imports, only the published interface.
+
+### Additional prerequisites
+
+| Tool | Version |
+|------|---------|
+| Python | 3.12+ |
+| uv | any recent |
+
+### Quick start
+
+```bash
+cd searchlab-eval
+
+# Download a BEIR dataset (nfcorpus = smallest, ~3 500 docs)
+uv run searchlab-eval download --dataset nfcorpus
+
+# Build the JAR and seed the index (skip if you already ran the main quick start)
+cd .. && mvn package -q && ./searchlab ingest test-corpus/sample.pdf && cd searchlab-eval
+
+# Ingest corpus into OpenSearch — goes into index searchlab-nfcorpus
+uv run searchlab-eval ingest --dataset nfcorpus
+
+# Run evaluation queries and collect ranked results
+uv run searchlab-eval query --dataset nfcorpus
+# → writes results/nfcorpus-<timestamp>/raw_results.json
+
+# Compute IR metrics
+uv run searchlab-eval metrics ir --run-id <run_id>
+# → prints table; writes results/<run_id>/ir_scores.json
+```
+
+Use `--slice N` on `download` to limit to N queries for fast local iteration (default 100).
+
+### Multiple datasets
+
+Each dataset gets its own OpenSearch index (`searchlab-<dataset>`) so runs never interfere:
+
+```bash
+# Download and ingest both datasets
+uv run searchlab-eval download --dataset nfcorpus
+uv run searchlab-eval download --dataset fiqa
+
+uv run searchlab-eval ingest --dataset nfcorpus   # → index: searchlab-nfcorpus
+uv run searchlab-eval ingest --dataset fiqa        # → index: searchlab-fiqa
+
+# Query and score each independently
+uv run searchlab-eval query --dataset nfcorpus
+uv run searchlab-eval query --dataset fiqa
+```
+
+Override the index name with `--index <name>` if needed.
+
+### Metrics
+
+| Metric | Cut-offs |
+|--------|----------|
+| nDCG | @1, @3, @5, @10 |
+| MAP | @10 |
+| Recall | @5, @10 |
+
+RAG metrics (faithfulness, answer relevancy, context recall via `ragas`) are planned for Phase 5 behind a `--rag` flag — no LLM cost unless opted in.
+
+### Layout
+
+```
+searchlab-eval/
+├── pyproject.toml              # Python 3.12, uv, all deps pinned
+├── searchlab_eval/
+│   ├── cli.py                  # Click entry point (download/ingest/query/metrics)
+│   ├── downloader.py           # BEIR GenericDataLoader wrapper
+│   ├── slicer.py               # Deterministic query subsetting
+│   ├── ingestor.py             # OpenSearch _bulk ingest
+│   ├── querier.py              # Query loop + result collection
+│   └── metrics/
+│       └── ir.py               # pytrec_eval wrapper (nDCG, MAP, Recall)
+├── tests/                      # pytest suite (offline + integration-tagged)
+├── data/                       # Downloaded BEIR datasets (git-ignored)
+├── results/                    # Eval run outputs (git-ignored)
+└── specs/                      # Per-phase requirements and plans
+```
+
+### Eval phases
+
+| Phase | Deliverable | Status |
+|-------|-------------|--------|
+| 0 | Scaffold — `searchlab-eval --help` works | **Done** |
+| 1 | Dataset download — `download --dataset <name>` | **Done** |
+| 2 | Ingest — `ingest --dataset <name>` | **Done** |
+| 3 | Query — `query --dataset <name>` → `raw_results.json` | **Done** |
+| 4 | IR metrics — `metrics ir --run-id <id>` → `ir_scores.json` | **Done** |
+| 5 | RAG metrics — faithfulness, answer relevancy, context recall | Planned |
+| 6 | HTML report — self-contained `report.html` | Planned |
+| 7 | End-to-end CLI — `run --dataset <name>` orchestrates 1–6 | Planned |
+| 8 | CI / pytest harness — metric threshold gating | Planned |
+
+---
+
 ## Project layout
 
 ```
@@ -117,6 +217,7 @@ searchlab/
 ├── run-smoke.sh                # Phase 0 acceptance test
 ├── test-corpus/sample.pdf      # public-domain RFC 1149 (IP over Avian Carriers)
 ├── specs/phase-0/              # spec.md, plan.md, tasks.md
+├── searchlab-eval/             # Python evaluation harness (see above)
 └── src/main/java/com/searchlab/
     ├── Main.java
     ├── cli/                    # IngestCommand, QueryCommand (Picocli)
@@ -132,7 +233,7 @@ searchlab/
 | Phase | Objective | Status |
 |-------|-----------|--------|
 | 0 | Pipeline alive — PDF → BM25 hits | **Done** |
-| 1 | Evaluation loop — golden set + BM25 baseline | Planned |
+| 1 | Evaluation loop — BEIR datasets + IR metrics baseline | **In progress** |
 | 2+ | Retrieval improvements | Backlog |
 
 ---

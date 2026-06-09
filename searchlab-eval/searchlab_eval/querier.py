@@ -25,9 +25,9 @@ def _parse_hits(stdout: str) -> list[dict]:
     return hits
 
 
-def run_query(query_text: str, opensearch_url: str, top_k: int) -> list[dict]:
-    cmd = ["searchlab", "query", query_text, "--top-k", str(top_k)]
-    env = {**os.environ, "OPENSEARCH_URL": opensearch_url}
+def run_query(query_text: str, opensearch_url: str, top_k: int, index: str, searchlab_bin: str = "searchlab") -> list[dict]:
+    cmd = [searchlab_bin, "query", query_text, "--top-k", str(top_k)]
+    env = {**os.environ, "OPENSEARCH_URL": opensearch_url, "SEARCHLAB_INDEX": index}
     proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
     if proc.returncode != 0:
         raise RuntimeError(f"searchlab query exited {proc.returncode}: {proc.stderr.strip()}")
@@ -45,11 +45,11 @@ def load_queries(queries_path: Path) -> dict[str, str]:
     return queries
 
 
-def run_queries(queries: dict[str, str], opensearch_url: str, top_k: int) -> dict[str, list[dict]]:
+def run_queries(queries: dict[str, str], opensearch_url: str, top_k: int, index: str, searchlab_bin: str = "searchlab") -> dict[str, list[dict]]:
     results = {}
     for query_id, text in tqdm(queries.items(), desc="Querying", unit="q"):
         try:
-            results[query_id] = run_query(text, opensearch_url, top_k)
+            results[query_id] = run_query(text, opensearch_url, top_k, index=index, searchlab_bin=searchlab_bin)
         except RuntimeError as e:
             print(f"Warning: query {query_id!r} failed: {e}", file=sys.stderr)
             results[query_id] = []
