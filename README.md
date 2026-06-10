@@ -82,6 +82,32 @@ Rank  Score    Source                          Page  Snippet
     BM25 search against indexed chunks.
     Prints: rank | score | source | page | 200-char snippet
     Default top-k: 5
+
+./searchlab rag "<question>" [--top-k N] [--model <model>]
+    Retrieve top-K passages via BM25, assemble them into a prompt,
+    call the OpenAI API, and print the generated answer with sources.
+    Requires OPENAI_API_KEY environment variable.
+    Default top-k: 5. Default model: gpt-4o-mini.
+```
+
+### `rag` example
+
+```bash
+export OPENAI_API_KEY=sk-...
+./searchlab rag "what is dollar cost averaging" --top-k 5
+```
+
+Expected output:
+```
+Answer:
+Dollar cost averaging is an investment strategy where an investor divides
+the total amount to be invested across periodic purchases of a target asset
+in order to reduce the impact of volatility on the overall purchase.
+
+Sources:
+  [1] fiqa-corpus/doc_2847.txt  (score: 0.821)
+  [2] fiqa-corpus/doc_1203.txt  (score: 0.764)
+  [3] fiqa-corpus/doc_0091.txt  (score: 0.701)
 ```
 
 ---
@@ -240,4 +266,13 @@ searchlab/
 
 ## Environment variables
 
-See `.env.example`. Phase 0 requires none — OpenSearch runs unauthenticated locally.
+See `.env.example`.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `OPENAI_API_KEY` | Yes (for `rag`) | — | OpenAI API key |
+| `SEARCHLAB_LLM_MODEL` | No | `gpt-4o-mini` | LLM model for `rag` command |
+| `OPENSEARCH_HOST` | No | `localhost` | OpenSearch host |
+| `OPENSEARCH_PORT` | No | `9200` | OpenSearch port |
+
+Phase 0 required none of these — OpenSearch runs unauthenticated locally. Phase 1 adds `OPENAI_API_KEY` for the `rag` command.

@@ -13,7 +13,8 @@ import picocli.CommandLine.Command;
         description = "SearchLab — PDF ingestion and BM25 search over OpenSearch",
         subcommands = {
                 com.searchlab.cli.IngestCommand.class,
-                com.searchlab.cli.QueryCommand.class
+                com.searchlab.cli.QueryCommand.class,
+                com.searchlab.cli.RagCommand.class
         }
 )
 public class Main implements Runnable {
