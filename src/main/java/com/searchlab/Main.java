@@ -14,7 +14,8 @@ import picocli.CommandLine.Command;
         subcommands = {
                 com.searchlab.cli.IngestCommand.class,
                 com.searchlab.cli.QueryCommand.class,
-                com.searchlab.cli.RagCommand.class
+                com.searchlab.cli.RagCommand.class,
+                com.searchlab.cli.WebCommand.class
         }
 )
 public class Main implements Runnable {
