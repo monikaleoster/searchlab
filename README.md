@@ -4,6 +4,8 @@ A public learning lab for hands-on search engineering. Each phase ships one meas
 
 **Phase 0 — Pipeline Alive:** PDF → chunks → BM25 hits. No magic, just plumbing.
 
+**Phase 1 — RAG Loop:** BM25 retrieval → context assembly → OpenAI generation → grounded answer with sources.
+
 ---
 
 ## Prerequisites
@@ -87,7 +89,16 @@ Rank  Score    Source                          Page  Snippet
     Retrieve top-K passages via BM25, assemble them into a prompt,
     call the OpenAI API, and print the generated answer with sources.
     Requires OPENAI_API_KEY environment variable.
-    Default top-k: 5. Default model: gpt-4o-mini.
+    Default top-k: 5. Default model: gpt-4o-mini (override via --model or SEARCHLAB_LLM_MODEL).
+
+./searchlab serve [--port N]
+    Launch a local web UI at http://localhost:8080.
+    Tabs: RAG (with dataset selector) | Query | Ingest | Eval | Metrics
+    RAG tab: select nfcorpus, FiQA-2018, or the default index, enter a question,
+    get a grounded LLM answer with source attribution.
+    Eval tab: download / ingest / query / compute metrics via live log stream.
+    Metrics tab: per-query sortable table, compare two runs side-by-side.
+    Default port: 8080. Requires OPENAI_API_KEY for the RAG tab.
 ```
 
 ### `rag` example
@@ -110,24 +121,71 @@ Sources:
   [3] fiqa-corpus/doc_0091.txt  (score: 0.701)
 ```
 
+### `serve` example
+
+```bash
+export OPENAI_API_KEY=sk-...
+./searchlab serve
+# → SearchLab UI → http://localhost:8080
+```
+
+Open `http://localhost:8080` in a browser. The page shows:
+- A question input that POSTs to the RAG pipeline (no page reload)
+- The generated answer and source citations
+- IR evaluation metric tables (nDCG, Recall, MAP) auto-loaded from `searchlab-eval/results/`
+
 ---
 
 ## Smoke test
 
-Runs all Phase 0 acceptance checks (ingest, query, idempotency) and exits 0:
+Runs all acceptance checks and exits 0:
 
 ```bash
 ./run-smoke.sh
 ```
 
+Checks performed:
+1. OpenSearch reachable
+2. Ingest a PDF → chunk count > 0
+3. Query returns ranked results
+4. Re-ingest is idempotent
+5. `rag` command returns non-empty output (skipped if `OPENAI_API_KEY` is absent)
+
+```bash
+# Run with RAG smoke check enabled
+OPENAI_API_KEY=sk-... ./run-smoke.sh
+```
+
 ---
 
-## How it works (Phase 0)
+## How it works
+
+### Phase 0 — Ingestion & BM25 retrieval
 
 1. **PDFBox 3.x** extracts per-page text from the PDF.
 2. **jtokkit** (`cl100k_base`) tokenizes the concatenated text and slices it into 512-token windows.
 3. Each chunk gets a deterministic ID: `sha256(filename + ":" + position)[:16]` — re-ingesting overwrites, never duplicates.
 4. **OpenSearch `match` query** against `chunk_text` returns BM25-ranked results.
+
+### Phase 1 — RAG pipeline
+
+1. `rag` calls the existing BM25 retrieval (`Bm25Searcher`) directly — no subprocess.
+2. **`ContextBuilder`** formats the top-K hits as numbered passages: `[N] filename: snippet`.
+3. A two-part prompt is sent to the OpenAI Chat Completions API:
+   - **System:** _"You are a search assistant. Answer the question using only the provided passages."_
+   - **User:** the formatted passages block + the question
+4. Temperature is fixed at `0` for reproducible outputs (required for Phase 2 benchmarking).
+5. The answer is printed with source attribution (filename, rank, BM25 score).
+
+#### Error handling
+
+| Scenario | Behaviour |
+|---|---|
+| Missing `OPENAI_API_KEY` | Print clear message, exit 1 |
+| Empty retrieval results | Print "No passages retrieved", exit 0 (skip LLM) |
+| LLM API error (4xx/5xx) | Print HTTP status + message, exit 1 |
+| LLM timeout (> 30 s) | Print timeout message, exit 1 |
+| OpenSearch unavailable | Human-readable connection error, exit 1 |
 
 ---
 
@@ -240,15 +298,25 @@ searchlab/
 ├── docker-compose.yml          # OpenSearch 2.19.0, single-node, dev-only
 ├── pom.xml                     # Java 21, Maven, all deps pinned
 ├── searchlab                   # shell wrapper → target/searchlab.jar
-├── run-smoke.sh                # Phase 0 acceptance test
+├── run-smoke.sh                # acceptance test (Phase 0 + Phase 1 RAG check)
 ├── test-corpus/sample.pdf      # public-domain RFC 1149 (IP over Avian Carriers)
-├── specs/phase-0/              # spec.md, plan.md, tasks.md
+├── specs/                      # per-phase requirements and plans
 ├── searchlab-eval/             # Python evaluation harness (see above)
 └── src/main/java/com/searchlab/
     ├── Main.java
-    ├── cli/                    # IngestCommand, QueryCommand (Picocli)
+    ├── cli/
+    │   ├── IngestCommand.java  # ./searchlab ingest
+    │   ├── QueryCommand.java   # ./searchlab query
+    │   ├── RagCommand.java     # ./searchlab rag  (Phase 1)
+    │   └── WebCommand.java     # ./searchlab serve (Phase 1)
     ├── ingest/                 # PdfParser, Chunker, Indexer, ChunkId
-    ├── search/                 # Bm25Searcher
+    ├── rag/
+    │   ├── ContextBuilder.java # formats SearchHit list → numbered passage block
+    │   ├── LlmClient.java      # OpenAI Chat Completions (java.net.http, temp=0)
+    │   ├── LlmApiException.java
+    │   ├── LlmTimeoutException.java
+    │   └── RagResult.java      # shared result record (answer, sources, error)
+    ├── search/                 # Bm25Searcher, SearchHit
     └── opensearch/             # OpenSearchClientFactory, IndexBootstrap
 ```
 
@@ -259,8 +327,19 @@ searchlab/
 | Phase | Objective | Status |
 |-------|-----------|--------|
 | 0 | Pipeline alive — PDF → BM25 hits | **Done** |
-| 1 | Evaluation loop — BEIR datasets + IR metrics baseline | **In progress** |
-| 2+ | Retrieval improvements | Backlog |
+| 1 | RAG loop — BM25 retrieval → LLM generation → grounded answer | **Done** |
+| 2 | RAG evaluation — faithfulness, context recall, answer relevancy (RAGAS) | Planned |
+| 3 | Hybrid / semantic retrieval | Planned |
+| 4+ | Re-ranking, HyDE, query expansion | Backlog |
+
+### Phase 1 baseline IR numbers (BM25, no re-ranking)
+
+| Dataset | nDCG@10 | Recall@10 | MAP@10 |
+|---------|---------|-----------|--------|
+| nfcorpus | 0.328 | 0.140 | 0.122 |
+| FiQA-2018 | 0.266 | 0.342 | 0.206 |
+
+These are the retrieval numbers feeding the Phase 1 RAG pipeline. Phase 2 will measure answer quality on top of these.
 
 ---
 
