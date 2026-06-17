@@ -1,0 +1,3807 @@
+{
+  "run_id": "nfcorpus-20260616T132907Z",
+  "dataset": "nfcorpus",
+  "top_k": 10,
+  "created_at": "2026-06-16T13:30:34.146243+00:00",
+  "results": {
+    "PLAIN-1008": [],
+    "PLAIN-1018": [
+      {
+        "doc_id": "MED-5095",
+        "score": 10.086,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-839",
+        "score": 9.9439,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-4936",
+        "score": 9.9439,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-5091",
+        "score": 9.6163,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-928",
+        "score": 9.5536,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-1832",
+        "score": 9.3393,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-3012",
+        "score": 9.2113,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-5092",
+        "score": 9.2113,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-5093",
+        "score": 9.151,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-838",
+        "score": 8.6782,
+        "rank": 10
+      }
+    ],
+    "PLAIN-102": [
+      {
+        "doc_id": "MED-4247",
+        "score": 12.7181,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4616",
+        "score": 12.7181,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-3954",
+        "score": 12.4209,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-1999",
+        "score": 11.7028,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-3253",
+        "score": 10.658,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-4160",
+        "score": 10.0606,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-5251",
+        "score": 8.4556,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-1932",
+        "score": 7.987,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-4496",
+        "score": 7.9048,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-4315",
+        "score": 7.8268,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1028": [
+      {
+        "doc_id": "MED-4178",
+        "score": 8.2425,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-3248",
+        "score": 6.6448,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1861",
+        "score": 6.1096,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2412",
+        "score": 6.1096,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1677",
+        "score": 5.7983,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-4131",
+        "score": 5.7983,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-4555",
+        "score": 5.7983,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-754",
+        "score": 2.5428,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1885",
+        "score": 2.5254,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-3486",
+        "score": 2.5118,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1039": [
+      {
+        "doc_id": "MED-4380",
+        "score": 18.5029,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4381",
+        "score": 17.4818,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-3221",
+        "score": 4.4921,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-3215",
+        "score": 4.4725,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1067",
+        "score": 4.425,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-846",
+        "score": 4.4066,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-5270",
+        "score": 4.4066,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-2098",
+        "score": 4.3702,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1846",
+        "score": 4.335,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-3943",
+        "score": 4.3316,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1050": [
+      {
+        "doc_id": "MED-1712",
+        "score": 11.2769,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2510",
+        "score": 10.8695,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1021",
+        "score": 10.1788,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2498",
+        "score": 10.1777,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-2324",
+        "score": 10.0938,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-3283",
+        "score": 9.7911,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-2509",
+        "score": 9.5301,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-2502",
+        "score": 9.0567,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1116",
+        "score": 7.6991,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-2763",
+        "score": 7.2903,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1066": [
+      {
+        "doc_id": "MED-1712",
+        "score": 11.2769,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2510",
+        "score": 10.8695,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1021",
+        "score": 10.1788,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2498",
+        "score": 10.1777,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-2324",
+        "score": 10.0938,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-3283",
+        "score": 9.7911,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-2509",
+        "score": 9.5301,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-2502",
+        "score": 9.0567,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1116",
+        "score": 7.6991,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-892",
+        "score": 7.3076,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1088": [
+      {
+        "doc_id": "MED-2109",
+        "score": 13.9956,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2110",
+        "score": 12.6962,
+        "rank": 2
+      }
+    ],
+    "PLAIN-1098": [],
+    "PLAIN-1109": [
+      {
+        "doc_id": "MED-2643",
+        "score": 17.2609,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2650",
+        "score": 16.1747,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1763",
+        "score": 14.8793,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-5323",
+        "score": 13.9912,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1777",
+        "score": 11.291,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-1003",
+        "score": 10.3816,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-5167",
+        "score": 10.1102,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-1100",
+        "score": 9.8526,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1099",
+        "score": 8.4688,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-4728",
+        "score": 7.0465,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1119": [
+      {
+        "doc_id": "MED-4025",
+        "score": 10.3135,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-1708",
+        "score": 10.2053,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1710",
+        "score": 9.5081,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-3091",
+        "score": 8.2283,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1534",
+        "score": 8.0987,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-1627",
+        "score": 7.8938,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-4834",
+        "score": 7.818,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-895",
+        "score": 7.3249,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1707",
+        "score": 7.2844,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-4036",
+        "score": 7.0437,
+        "rank": 10
+      }
+    ],
+    "PLAIN-112": [
+      {
+        "doc_id": "MED-3380",
+        "score": 25.6306,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2618",
+        "score": 14.65,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-3382",
+        "score": 13.4806,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2616",
+        "score": 13.3182,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-4604",
+        "score": 12.312,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-3383",
+        "score": 12.2718,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-1153",
+        "score": 11.8657,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-4655",
+        "score": 11.7013,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-2643",
+        "score": 6.65,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-2992",
+        "score": 6.2719,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1130": [
+      {
+        "doc_id": "MED-4165",
+        "score": 15.636,
+        "rank": 1
+      }
+    ],
+    "PLAIN-1141": [
+      {
+        "doc_id": "MED-2112",
+        "score": 11.5158,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2428",
+        "score": 10.2165,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-5346",
+        "score": 9.7415,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-3113",
+        "score": 9.3281,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1398",
+        "score": 8.3199,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-1037",
+        "score": 7.9001,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-4157",
+        "score": 7.1851,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-1051",
+        "score": 7.0652,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-2817",
+        "score": 7.0652,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-3231",
+        "score": 6.859,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1151": [
+      {
+        "doc_id": "MED-1179",
+        "score": 13.5161,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4489",
+        "score": 11.8702,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-3306",
+        "score": 10.2762,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-1759",
+        "score": 9.6505,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1181",
+        "score": 9.0031,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-2299",
+        "score": 7.4936,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-2742",
+        "score": 7.2964,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-3372",
+        "score": 7.2964,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-2388",
+        "score": 7.2521,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-3310",
+        "score": 6.8627,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1161": [
+      {
+        "doc_id": "MED-3584",
+        "score": 8.5851,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-3138",
+        "score": 8.2462,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1880",
+        "score": 8.1005,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2140",
+        "score": 7.8962,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-3136",
+        "score": 7.4375,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-2141",
+        "score": 7.3794,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-4991",
+        "score": 7.3388,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-2147",
+        "score": 7.2135,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-2144",
+        "score": 7.0549,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-5079",
+        "score": 6.904,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1172": [
+      {
+        "doc_id": "MED-4150",
+        "score": 14.594,
+        "rank": 1
+      }
+    ],
+    "PLAIN-1183": [
+      {
+        "doc_id": "MED-1276",
+        "score": 9.5186,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-5331",
+        "score": 8.1642,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-4727",
+        "score": 8.136,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2582",
+        "score": 7.8229,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-10",
+        "score": 7.2639,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-3856",
+        "score": 6.3045,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-1201",
+        "score": 5.7679,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-3981",
+        "score": 5.6088,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-4070",
+        "score": 5.6088,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-3976",
+        "score": 5.4582,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1193": [
+      {
+        "doc_id": "MED-2378",
+        "score": 14.967,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-3868",
+        "score": 13.4385,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-839",
+        "score": 12.0571,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-3796",
+        "score": 11.4604,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1825",
+        "score": 11.3505,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-1826",
+        "score": 10.4292,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-3869",
+        "score": 7.8282,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-1827",
+        "score": 7.6884,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-4303",
+        "score": 6.7471,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-4004",
+        "score": 6.5804,
+        "rank": 10
+      }
+    ],
+    "PLAIN-12": [
+      {
+        "doc_id": "MED-4711",
+        "score": 11.808,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-5042",
+        "score": 11.1497,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-2501",
+        "score": 10.5465,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-4698",
+        "score": 10.3357,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-2333",
+        "score": 8.386,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-1376",
+        "score": 8.2202,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-4884",
+        "score": 8.1353,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-2603",
+        "score": 8.0118,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-2136",
+        "score": 7.8281,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-2815",
+        "score": 6.6756,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1203": [
+      {
+        "doc_id": "MED-4771",
+        "score": 14.4589,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-1203",
+        "score": 13.6773,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-3275",
+        "score": 11.0677,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-4872",
+        "score": 10.8938,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-4764",
+        "score": 10.6538,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-4600",
+        "score": 10.3569,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-986",
+        "score": 10.2663,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-5208",
+        "score": 10.0829,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1528",
+        "score": 9.6997,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-980",
+        "score": 9.1068,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1214": [],
+    "PLAIN-1225": [
+      {
+        "doc_id": "MED-918",
+        "score": 10.2512,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-1669",
+        "score": 10.0758,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1674",
+        "score": 9.9668,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-717",
+        "score": 9.9475,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-3059",
+        "score": 9.8473,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-1710",
+        "score": 9.7056,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-1675",
+        "score": 9.6134,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-1672",
+        "score": 9.4445,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1261",
+        "score": 9.4147,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-2969",
+        "score": 9.2914,
+        "rank": 10
+      }
+    ],
+    "PLAIN-123": [
+      {
+        "doc_id": "MED-4256",
+        "score": 15.8191,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4969",
+        "score": 13.3269,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-4429",
+        "score": 11.3111,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-4804",
+        "score": 10.5196,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1020",
+        "score": 10.2248,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-4392",
+        "score": 10.1042,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-4922",
+        "score": 9.6002,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-2501",
+        "score": 9.2983,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-3483",
+        "score": 9.2894,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-3436",
+        "score": 8.8616,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1236": [
+      {
+        "doc_id": "MED-1341",
+        "score": 13.7783,
+        "rank": 1
+      }
+    ],
+    "PLAIN-1249": [
+      {
+        "doc_id": "MED-3283",
+        "score": 8.1111,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-3928",
+        "score": 6.7061,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-2303",
+        "score": 6.5226,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-3173",
+        "score": 6.5103,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-4854",
+        "score": 6.3256,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-2090",
+        "score": 6.1682,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-5018",
+        "score": 6.1511,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-2674",
+        "score": 6.023,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-5055",
+        "score": 5.9882,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-3961",
+        "score": 5.986,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1262": [
+      {
+        "doc_id": "MED-5293",
+        "score": 15.8483,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-983",
+        "score": 15.5207,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-4932",
+        "score": 11.4642,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-4911",
+        "score": 11.1851,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-5331",
+        "score": 10.7888,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-5303",
+        "score": 10.6128,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-2211",
+        "score": 10.563,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-4096",
+        "score": 9.9823,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-3174",
+        "score": 9.5931,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-2082",
+        "score": 9.3852,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1275": [
+      {
+        "doc_id": "MED-4712",
+        "score": 16.5852,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2886",
+        "score": 11.6941,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1676",
+        "score": 9.0758,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2924",
+        "score": 8.9296,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-4900",
+        "score": 8.819,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-1671",
+        "score": 8.4836,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-2665",
+        "score": 8.0707,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-2076",
+        "score": 7.9805,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-4366",
+        "score": 7.4638,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-4576",
+        "score": 7.4383,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1288": [
+      {
+        "doc_id": "MED-1538",
+        "score": 10.0989,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-1533",
+        "score": 9.7733,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-2085",
+        "score": 7.2231,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2663",
+        "score": 7.2231,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1795",
+        "score": 6.8493,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-3382",
+        "score": 6.3541,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-3728",
+        "score": 6.3541,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-4029",
+        "score": 6.157,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-5065",
+        "score": 5.9719,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-4585",
+        "score": 5.7975,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1299": [
+      {
+        "doc_id": "MED-4747",
+        "score": 10.0106,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-3135",
+        "score": 8.1308,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-2983",
+        "score": 7.0569,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2106",
+        "score": 6.2782,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-4451",
+        "score": 5.5172,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-2774",
+        "score": 5.4649,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-1223",
+        "score": 5.4248,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-2700",
+        "score": 5.262,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1229",
+        "score": 5.2466,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-2123",
+        "score": 5.2466,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1309": [],
+    "PLAIN-1320": [
+      {
+        "doc_id": "MED-4929",
+        "score": 11.676,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2760",
+        "score": 11.2128,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1986",
+        "score": 10.8233,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2758",
+        "score": 10.645,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-3932",
+        "score": 9.7231,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-2761",
+        "score": 9.3992,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-2525",
+        "score": 8.9,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-728",
+        "score": 8.3292,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1549",
+        "score": 8.1448,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-727",
+        "score": 7.9012,
+        "rank": 10
+      }
+    ],
+    "PLAIN-133": [
+      {
+        "doc_id": "MED-1666",
+        "score": 11.3308,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-1665",
+        "score": 9.2164,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-2923",
+        "score": 9.1197,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2751",
+        "score": 8.8484,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-2426",
+        "score": 8.6449,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-4423",
+        "score": 8.5854,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-2066",
+        "score": 8.5463,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-5053",
+        "score": 8.4049,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-2010",
+        "score": 8.3495,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-1170",
+        "score": 8.1821,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1331": [
+      {
+        "doc_id": "MED-1049",
+        "score": 10.0251,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-3381",
+        "score": 8.818,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-3391",
+        "score": 6.513,
+        "rank": 3
+      }
+    ],
+    "PLAIN-1342": [
+      {
+        "doc_id": "MED-2851",
+        "score": 18.6737,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4317",
+        "score": 18.2998,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1403",
+        "score": 17.2405,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2845",
+        "score": 17.0948,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-2844",
+        "score": 16.6546,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-1401",
+        "score": 16.6219,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-5326",
+        "score": 15.3775,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-4493",
+        "score": 12.3032,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-2108",
+        "score": 10.5817,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-847",
+        "score": 8.9974,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1353": [
+      {
+        "doc_id": "MED-976",
+        "score": 12.3997,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2110",
+        "score": 7.8254,
+        "rank": 2
+      }
+    ],
+    "PLAIN-1363": [
+      {
+        "doc_id": "MED-3620",
+        "score": 7.3076,
+        "rank": 1
+      }
+    ],
+    "PLAIN-1374": [
+      {
+        "doc_id": "MED-820",
+        "score": 7.7523,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-3429",
+        "score": 6.8985,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-3795",
+        "score": 6.5872,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-3398",
+        "score": 6.5529,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-4747",
+        "score": 6.3655,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-5292",
+        "score": 6.3337,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-4757",
+        "score": 6.2142,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-4897",
+        "score": 6.2142,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-828",
+        "score": 6.1082,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-1647",
+        "score": 6.1082,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1387": [
+      {
+        "doc_id": "MED-3380",
+        "score": 9.629,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-5063",
+        "score": 8.8052,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1686",
+        "score": 8.3728,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-3383",
+        "score": 8.0377,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-4655",
+        "score": 7.7285,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-1153",
+        "score": 7.4421,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-2078",
+        "score": 7.3713,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-3384",
+        "score": 7.3068,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-5062",
+        "score": 7.1762,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-3381",
+        "score": 6.9287,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1398": [
+      {
+        "doc_id": "MED-1715",
+        "score": 11.5631,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4212",
+        "score": 11.2001,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-4216",
+        "score": 11.1294,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-4897",
+        "score": 11.1294,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-4228",
+        "score": 10.9086,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-1722",
+        "score": 10.7873,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-4220",
+        "score": 10.4604,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-1723",
+        "score": 10.2734,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-4225",
+        "score": 10.1919,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-4211",
+        "score": 9.955,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1409": [
+      {
+        "doc_id": "MED-1570",
+        "score": 8.601,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-1675",
+        "score": 8.575,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1572",
+        "score": 8.4508,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-1697",
+        "score": 8.3348,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1272",
+        "score": 7.859,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-1689",
+        "score": 7.6822,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-5073",
+        "score": 7.572,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-3321",
+        "score": 7.1845,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1144",
+        "score": 7.0166,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-5101",
+        "score": 6.8313,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1419": [
+      {
+        "doc_id": "MED-4198",
+        "score": 8.4989,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2327",
+        "score": 7.8844,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-5156",
+        "score": 7.1938,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2344",
+        "score": 6.7969,
+        "rank": 4
+      }
+    ],
+    "PLAIN-1429": [
+      {
+        "doc_id": "MED-1559",
+        "score": 13.7372,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4925",
+        "score": 10.9011,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-4594",
+        "score": 10.034,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-1381",
+        "score": 8.9627,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-4802",
+        "score": 8.8174,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-5112",
+        "score": 8.7231,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-4057",
+        "score": 8.0809,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-1700",
+        "score": 7.9389,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-2310",
+        "score": 7.4419,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-1921",
+        "score": 7.2523,
+        "rank": 10
+      }
+    ],
+    "PLAIN-143": [
+      {
+        "doc_id": "MED-3621",
+        "score": 25.7775,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2093",
+        "score": 12.7432,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-4028",
+        "score": 11.0183,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-4036",
+        "score": 10.5001,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-4027",
+        "score": 10.0732,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-5097",
+        "score": 9.621,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-4026",
+        "score": 9.4621,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-872",
+        "score": 9.4229,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1988",
+        "score": 9.4126,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-3618",
+        "score": 9.2775,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1441": [
+      {
+        "doc_id": "MED-2216",
+        "score": 7.6667,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2773",
+        "score": 7.4037,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-2770",
+        "score": 7.0981,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-1332",
+        "score": 6.7414,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-3629",
+        "score": 6.5815,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-3659",
+        "score": 6.5815,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-2299",
+        "score": 6.3954,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-2218",
+        "score": 6.2195,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-5117",
+        "score": 6.2195,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-4817",
+        "score": 6.032,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1453": [
+      {
+        "doc_id": "MED-2221",
+        "score": 9.2344,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4366",
+        "score": 9.0488,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1955",
+        "score": 8.9407,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2742",
+        "score": 3.0217,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1761",
+        "score": 3.0004,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-5288",
+        "score": 2.9707,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-1046",
+        "score": 2.964,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-4796",
+        "score": 2.9627,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-2738",
+        "score": 2.9601,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-1150",
+        "score": 2.9415,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1463": [
+      {
+        "doc_id": "MED-2140",
+        "score": 13.9452,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2147",
+        "score": 12.424,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-3136",
+        "score": 12.0644,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-4165",
+        "score": 9.7607,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-3132",
+        "score": 9.1736,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-3584",
+        "score": 8.5851,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-3138",
+        "score": 8.2462,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-1880",
+        "score": 8.1005,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1133",
+        "score": 7.7708,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-2352",
+        "score": 7.7002,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1473": [
+      {
+        "doc_id": "MED-4455",
+        "score": 11.7118,
+        "rank": 1
+      }
+    ],
+    "PLAIN-1485": [
+      {
+        "doc_id": "MED-2099",
+        "score": 11.4774,
+        "rank": 1
+      }
+    ],
+    "PLAIN-1496": [],
+    "PLAIN-1506": [
+      {
+        "doc_id": "MED-5239",
+        "score": 11.8642,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2126",
+        "score": 11.7456,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-2121",
+        "score": 10.3286,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-4306",
+        "score": 8.0561,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-2117",
+        "score": 6.8447,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-2509",
+        "score": 6.2782,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-5025",
+        "score": 6.1096,
+        "rank": 7
+      }
+    ],
+    "PLAIN-1516": [
+      {
+        "doc_id": "MED-4181",
+        "score": 10.3124,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-930",
+        "score": 9.0092,
+        "rank": 2
+      }
+    ],
+    "PLAIN-1527": [
+      {
+        "doc_id": "MED-2160",
+        "score": 8.7939,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-1307",
+        "score": 8.2097,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1304",
+        "score": 8.021,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-1302",
+        "score": 7.8752,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-2158",
+        "score": 7.769,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-4101",
+        "score": 7.6742,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-5233",
+        "score": 7.5917,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-4817",
+        "score": 7.5437,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-2154",
+        "score": 7.4931,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-1868",
+        "score": 7.4491,
+        "rank": 10
+      }
+    ],
+    "PLAIN-153": [
+      {
+        "doc_id": "MED-3677",
+        "score": 17.5842,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2105",
+        "score": 11.6089,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1716",
+        "score": 11.2492,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-1248",
+        "score": 10.8239,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-3695",
+        "score": 10.4375,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-3673",
+        "score": 10.0232,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-3164",
+        "score": 9.9341,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-3692",
+        "score": 9.7999,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-3680",
+        "score": 9.7266,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-3691",
+        "score": 9.0975,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1537": [
+      {
+        "doc_id": "MED-4880",
+        "score": 21.4826,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-3149",
+        "score": 7.6368,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-3273",
+        "score": 7.6164,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-1257",
+        "score": 7.3685,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-4353",
+        "score": 7.3563,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-5267",
+        "score": 7.2355,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-3874",
+        "score": 7.2228,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-4885",
+        "score": 7.2228,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-4831",
+        "score": 7.2139,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-2588",
+        "score": 7.2094,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1547": [
+      {
+        "doc_id": "MED-2360",
+        "score": 16.9567,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2361",
+        "score": 14.7032,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-983",
+        "score": 2.6947,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-975",
+        "score": 2.6428,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-5030",
+        "score": 2.6391,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-4013",
+        "score": 2.614,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-2590",
+        "score": 2.5994,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-972",
+        "score": 2.5948,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-2111",
+        "score": 2.5878,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-2303",
+        "score": 2.5811,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1557": [
+      {
+        "doc_id": "MED-1406",
+        "score": 9.2123,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2248",
+        "score": 8.5966,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-3918",
+        "score": 8.2779,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-4315",
+        "score": 7.5426,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1447",
+        "score": 6.4451,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-5005",
+        "score": 6.1116,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-4313",
+        "score": 5.9078,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-1528",
+        "score": 5.3287,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-2380",
+        "score": 5.3287,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-4298",
+        "score": 5.1731,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1568": [
+      {
+        "doc_id": "MED-4150",
+        "score": 25.1974,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-5056",
+        "score": 18.9127,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-2490",
+        "score": 8.7343,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-4782",
+        "score": 8.3982,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1710",
+        "score": 8.3836,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-2054",
+        "score": 8.1907,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-5057",
+        "score": 7.4591,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-717",
+        "score": 6.9617,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1672",
+        "score": 6.2792,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-5059",
+        "score": 5.9229,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1579": [
+      {
+        "doc_id": "MED-4667",
+        "score": 8.9369,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4801",
+        "score": 8.5767,
+        "rank": 2
+      }
+    ],
+    "PLAIN-1590": [
+      {
+        "doc_id": "MED-3604",
+        "score": 16.0022,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-748",
+        "score": 13.8924,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1240",
+        "score": 7.052,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-749",
+        "score": 5.5792,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-4599",
+        "score": 5.489,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-4674",
+        "score": 5.489,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-5347",
+        "score": 5.1328,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-1350",
+        "score": 5.0878,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1344",
+        "score": 5.0836,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-2086",
+        "score": 5.0352,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1601": [
+      {
+        "doc_id": "MED-1700",
+        "score": 8.2974,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-3537",
+        "score": 8.0802,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-4996",
+        "score": 8.0212,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2669",
+        "score": 7.8404,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-4860",
+        "score": 7.8404,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-5002",
+        "score": 7.7946,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-2668",
+        "score": 7.733,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-2367",
+        "score": 7.2265,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1506",
+        "score": 6.7583,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-1630",
+        "score": 6.7583,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1611": [],
+    "PLAIN-1621": [],
+    "PLAIN-1635": [
+      {
+        "doc_id": "MED-4899",
+        "score": 6.205,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-5118",
+        "score": 6.2003,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-3087",
+        "score": 6.1977,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2341",
+        "score": 6.1375,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-2774",
+        "score": 6.0836,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-4753",
+        "score": 6.0634,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-1229",
+        "score": 6.0428,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-2123",
+        "score": 6.0428,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-4071",
+        "score": 6.0428,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-4902",
+        "score": 6.0389,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1645": [
+      {
+        "doc_id": "MED-5056",
+        "score": 10.2472,
+        "rank": 1
+      }
+    ],
+    "PLAIN-165": [
+      {
+        "doc_id": "MED-4445",
+        "score": 15.0864,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-3766",
+        "score": 14.7149,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-5087",
+        "score": 14.5944,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-3762",
+        "score": 14.1379,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-3696",
+        "score": 14.1101,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-4465",
+        "score": 14.0899,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-3767",
+        "score": 13.9393,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-1564",
+        "score": 13.5964,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-2824",
+        "score": 13.4053,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-2604",
+        "score": 12.934,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1656": [
+      {
+        "doc_id": "MED-4470",
+        "score": 8.9159,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-1813",
+        "score": 7.5186,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-3764",
+        "score": 7.316,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-4819",
+        "score": 7.1182,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1248",
+        "score": 6.6927,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-4479",
+        "score": 6.3928,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-4036",
+        "score": 5.8015,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-2092",
+        "score": 5.7869,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1246",
+        "score": 5.4586,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-2101",
+        "score": 5.4586,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1667": [
+      {
+        "doc_id": "MED-3231",
+        "score": 7.3796,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-1474",
+        "score": 7.1075,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-4828",
+        "score": 7.066,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-3460",
+        "score": 7.053,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1466",
+        "score": 7.0521,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-3462",
+        "score": 7.0364,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-4166",
+        "score": 7.007,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-4830",
+        "score": 6.9841,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-4626",
+        "score": 6.9805,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-1460",
+        "score": 6.8414,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1679": [],
+    "PLAIN-1690": [
+      {
+        "doc_id": "MED-4599",
+        "score": 14.4715,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4674",
+        "score": 14.4715,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1878",
+        "score": 14.1672,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2327",
+        "score": 12.6418,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-3726",
+        "score": 12.25,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-2295",
+        "score": 9.0599,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-2220",
+        "score": 8.9836,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-3692",
+        "score": 8.1894,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1493",
+        "score": 7.862,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-1037",
+        "score": 6.9553,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1700": [
+      {
+        "doc_id": "MED-1417",
+        "score": 17.3592,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-5201",
+        "score": 14.7349,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-5198",
+        "score": 13.8148,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-4555",
+        "score": 9.0594,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1747",
+        "score": 8.1359,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-1100",
+        "score": 8.0188,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-4750",
+        "score": 7.4779,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-976",
+        "score": 7.4591,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1708",
+        "score": 7.3754,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-2213",
+        "score": 7.2105,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1710": [
+      {
+        "doc_id": "MED-3169",
+        "score": 10.6735,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-3180",
+        "score": 9.9316,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-3181",
+        "score": 9.8851,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-3175",
+        "score": 9.2603,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-3178",
+        "score": 8.8618,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-3174",
+        "score": 8.8162,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-3179",
+        "score": 8.6158,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-3172",
+        "score": 8.4095,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-3170",
+        "score": 7.4699,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-3177",
+        "score": 6.8672,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1721": [
+      {
+        "doc_id": "MED-4821",
+        "score": 17.6903,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-1602",
+        "score": 17.0225,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-4787",
+        "score": 16.7072,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-4485",
+        "score": 16.4033,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-4823",
+        "score": 13.4141,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-1627",
+        "score": 12.4394,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-1606",
+        "score": 11.4886,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-1377",
+        "score": 10.9316,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-4983",
+        "score": 10.7016,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-1230",
+        "score": 9.6464,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1731": [
+      {
+        "doc_id": "MED-2749",
+        "score": 11.7385,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2748",
+        "score": 10.6886,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-3509",
+        "score": 8.6127,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-4131",
+        "score": 6.0892,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-4132",
+        "score": 6.0892,
+        "rank": 5
+      }
+    ],
+    "PLAIN-1741": [
+      {
+        "doc_id": "MED-2383",
+        "score": 7.198,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4286",
+        "score": 7.1468,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-4300",
+        "score": 7.1468,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2595",
+        "score": 7.053,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-4292",
+        "score": 6.7783,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-2597",
+        "score": 6.7724,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-4707",
+        "score": 6.6115,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-4314",
+        "score": 6.5975,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-4295",
+        "score": 6.5175,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-2381",
+        "score": 6.3861,
+        "rank": 10
+      }
+    ],
+    "PLAIN-175": [
+      {
+        "doc_id": "MED-3818",
+        "score": 13.5432,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-3816",
+        "score": 12.2853,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-3822",
+        "score": 10.8508,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-4848",
+        "score": 2.7219,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-5200",
+        "score": 2.6896,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-1374",
+        "score": 2.6862,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-4854",
+        "score": 2.669,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-4347",
+        "score": 2.6594,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-5207",
+        "score": 2.6539,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-4744",
+        "score": 2.6531,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1752": [],
+    "PLAIN-1762": [
+      {
+        "doc_id": "MED-865",
+        "score": 19.7839,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-3721",
+        "score": 18.1539,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-759",
+        "score": 16.4945,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-3716",
+        "score": 16.3741,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-3558",
+        "score": 9.5347,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-3103",
+        "score": 9.4733,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-3111",
+        "score": 9.3656,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-3561",
+        "score": 8.1237,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-4752",
+        "score": 6.8864,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-2033",
+        "score": 6.6456,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1772": [
+      {
+        "doc_id": "MED-4728",
+        "score": 11.5342,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4727",
+        "score": 8.0608,
+        "rank": 2
+      }
+    ],
+    "PLAIN-1784": [
+      {
+        "doc_id": "MED-2671",
+        "score": 5.0125,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-5326",
+        "score": 4.9851,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-4482",
+        "score": 4.9648,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2170",
+        "score": 4.9494,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-4977",
+        "score": 4.9494,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-5195",
+        "score": 4.9385,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-1802",
+        "score": 4.9313,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-4493",
+        "score": 4.9311,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-4485",
+        "score": 4.9201,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-3499",
+        "score": 4.9144,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1794": [
+      {
+        "doc_id": "MED-5041",
+        "score": 11.0583,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-5042",
+        "score": 9.3225,
+        "rank": 2
+      }
+    ],
+    "PLAIN-1805": [
+      {
+        "doc_id": "MED-3931",
+        "score": 11.0844,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4939",
+        "score": 10.8716,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-2173",
+        "score": 9.4038,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-3930",
+        "score": 9.0488,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-3933",
+        "score": 8.9306,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-5335",
+        "score": 8.8811,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-1499",
+        "score": 8.7376,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-3925",
+        "score": 8.7196,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-2979",
+        "score": 8.5638,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-5054",
+        "score": 8.1463,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1817": [
+      {
+        "doc_id": "MED-4284",
+        "score": 18.4459,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4706",
+        "score": 18.3639,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-2150",
+        "score": 17.3812,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2382",
+        "score": 10.818,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-973",
+        "score": 9.8431,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-3198",
+        "score": 9.6367,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-5016",
+        "score": 9.1585,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-1534",
+        "score": 8.9376,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-4709",
+        "score": 8.8134,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-2792",
+        "score": 7.9671,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1827": [],
+    "PLAIN-1837": [
+      {
+        "doc_id": "MED-2748",
+        "score": 7.9687,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-1725",
+        "score": 7.8056,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1158",
+        "score": 7.6209,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-3936",
+        "score": 7.6057,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1726",
+        "score": 7.5742,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-4535",
+        "score": 7.5273,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-1167",
+        "score": 7.5,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-4178",
+        "score": 7.5,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1170",
+        "score": 7.482,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-1176",
+        "score": 7.482,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1847": [
+      {
+        "doc_id": "MED-4000",
+        "score": 7.4638,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-3603",
+        "score": 7.2521,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-3983",
+        "score": 6.513,
+        "rank": 3
+      }
+    ],
+    "PLAIN-1857": [
+      {
+        "doc_id": "MED-4319",
+        "score": 15.419,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2544",
+        "score": 15.1815,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-2988",
+        "score": 14.9172,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2578",
+        "score": 14.7465,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-2986",
+        "score": 12.5818,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-2979",
+        "score": 10.595,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-5231",
+        "score": 9.4989,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-5357",
+        "score": 8.919,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-1745",
+        "score": 8.413,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-2575",
+        "score": 7.1892,
+        "rank": 10
+      }
+    ],
+    "PLAIN-186": [
+      {
+        "doc_id": "MED-2054",
+        "score": 11.9935,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2059",
+        "score": 11.8479,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-3904",
+        "score": 11.35,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-949",
+        "score": 11.1545,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-2057",
+        "score": 11.0049,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-2292",
+        "score": 10.9615,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-2203",
+        "score": 10.4805,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-3510",
+        "score": 10.0542,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-3933",
+        "score": 9.6899,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-1016",
+        "score": 9.4314,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1867": [],
+    "PLAIN-1877": [
+      {
+        "doc_id": "MED-4831",
+        "score": 10.8509,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4255",
+        "score": 10.6672,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-4613",
+        "score": 10.6672,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-1489",
+        "score": 10.1037,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1991",
+        "score": 9.9716,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-1874",
+        "score": 9.9143,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-2432",
+        "score": 9.9143,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-4515",
+        "score": 9.7846,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-4349",
+        "score": 9.6953,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-1249",
+        "score": 9.5353,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1887": [
+      {
+        "doc_id": "MED-2824",
+        "score": 7.9123,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2333",
+        "score": 7.3815,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-5083",
+        "score": 7.2953,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-3607",
+        "score": 7.1172,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-3532",
+        "score": 7.0033,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-913",
+        "score": 6.9611,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-2332",
+        "score": 6.9318,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-915",
+        "score": 6.715,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-4915",
+        "score": 6.6619,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-1293",
+        "score": 6.5982,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1897": [
+      {
+        "doc_id": "MED-4186",
+        "score": 10.5892,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2644",
+        "score": 10.1745,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1312",
+        "score": 7.648,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2559",
+        "score": 7.4109,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-4426",
+        "score": 6.0892,
+        "rank": 5
+      }
+    ],
+    "PLAIN-1909": [
+      {
+        "doc_id": "MED-2341",
+        "score": 8.1541,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4818",
+        "score": 8.1372,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-1979",
+        "score": 7.7993,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-1983",
+        "score": 7.6831,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-2352",
+        "score": 7.6831,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-3171",
+        "score": 7.3906,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-1610",
+        "score": 7.3469,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-3891",
+        "score": 7.2175,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-4593",
+        "score": 7.1749,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-2340",
+        "score": 7.0108,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1919": [
+      {
+        "doc_id": "MED-3321",
+        "score": 15.8258,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4431",
+        "score": 14.9436,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-3315",
+        "score": 13.6095,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-4819",
+        "score": 13.5454,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-3320",
+        "score": 13.5294,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-4433",
+        "score": 13.2164,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-3615",
+        "score": 7.6633,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-3790",
+        "score": 7.5677,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-3311",
+        "score": 7.5176,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-4802",
+        "score": 7.4467,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1929": [
+      {
+        "doc_id": "MED-2497",
+        "score": 8.9407,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4656",
+        "score": 8.6348,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-2495",
+        "score": 8.3929,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-2905",
+        "score": 8.3439,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-3032",
+        "score": 8.3439,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-4038",
+        "score": 8.1896,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-5097",
+        "score": 7.9677,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-3035",
+        "score": 7.7358,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-4872",
+        "score": 7.7209,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-1003",
+        "score": 7.517,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1940": [
+      {
+        "doc_id": "MED-3792",
+        "score": 12.2421,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-3797",
+        "score": 11.4593,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-4946",
+        "score": 8.2787,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-4114",
+        "score": 7.1141,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1198",
+        "score": 7.0569,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-2006",
+        "score": 6.2782,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-829",
+        "score": 5.7983,
+        "rank": 7
+      }
+    ],
+    "PLAIN-1950": [
+      {
+        "doc_id": "MED-912",
+        "score": 12.801,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4250",
+        "score": 11.696,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-3904",
+        "score": 9.0222,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-1950",
+        "score": 6.0892,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-1795",
+        "score": 5.7939,
+        "rank": 5
+      }
+    ],
+    "PLAIN-196": [
+      {
+        "doc_id": "MED-3969",
+        "score": 20.6854,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-3964",
+        "score": 15.2116,
+        "rank": 2
+      },
+      {
+        "doc_id": "MED-895",
+        "score": 13.738,
+        "rank": 3
+      },
+      {
+        "doc_id": "MED-3960",
+        "score": 13.0456,
+        "rank": 4
+      },
+      {
+        "doc_id": "MED-5059",
+        "score": 12.8152,
+        "rank": 5
+      },
+      {
+        "doc_id": "MED-3963",
+        "score": 12.3808,
+        "rank": 6
+      },
+      {
+        "doc_id": "MED-3970",
+        "score": 11.7805,
+        "rank": 7
+      },
+      {
+        "doc_id": "MED-5133",
+        "score": 10.1467,
+        "rank": 8
+      },
+      {
+        "doc_id": "MED-5134",
+        "score": 9.1795,
+        "rank": 9
+      },
+      {
+        "doc_id": "MED-5326",
+        "score": 9.1107,
+        "rank": 10
+      }
+    ],
+    "PLAIN-1962": [
+      {
+        "doc_id": "MED-2438",
+        "score": 10.3124,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-4295",
+        "score": 8.3108,
+        "rank": 2
+      }
+    ],
+    "PLAIN-1972": [
+      {
+        "doc_id": "MED-1442",
+        "score": 10.944,
+        "rank": 1
+      },
+      {
+        "doc_id": "MED-2143",
+        "score": 8.3108,
+        "rank": 2
+      }
+    ]
+  }
+}
