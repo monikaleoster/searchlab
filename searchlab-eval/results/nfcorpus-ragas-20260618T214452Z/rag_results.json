@@ -1,0 +1,42 @@
+{
+  "run_id": "nfcorpus-ragas-20260618T214452Z",
+  "dataset": "nfcorpus",
+  "generated_at": "2026-06-18T21:45:00.132027+00:00",
+  "per_query": [
+    {
+      "query_id": "PLAIN-1008",
+      "question": "deafness",
+      "contexts": [],
+      "answer": "No passages retrieved for this query.",
+      "ground_truth": null
+    },
+    {
+      "query_id": "PLAIN-1098",
+      "question": "eggnog",
+      "contexts": [],
+      "answer": "No passages retrieved for this query.",
+      "ground_truth": null
+    },
+    {
+      "query_id": "PLAIN-1214",
+      "question": "Fosamax",
+      "contexts": [],
+      "answer": "No passages retrieved for this query.",
+      "ground_truth": null
+    },
+    {
+      "query_id": "PLAIN-1309",
+      "question": "halibut",
+      "contexts": [],
+      "answer": "No passages retrieved for this query.",
+      "ground_truth": null
+    },
+    {
+      "query_id": "PLAIN-1496",
+      "question": "leeks",
+      "contexts": [],
+      "answer": "No passages retrieved for this query.",
+      "ground_truth": null
+    }
+  ]
+}

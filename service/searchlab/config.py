@@ -15,3 +15,7 @@ def openai_api_key() -> str | None:
 
 def llm_model() -> str:
     return os.getenv("SEARCHLAB_LLM_MODEL", "gpt-4o-mini")
+
+
+def llm_judge_model() -> str:
+    return os.getenv("SEARCHLAB_LLM_JUDGE_MODEL", "gpt-4o-mini")

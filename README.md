@@ -255,7 +255,29 @@ Override the index name with `--index <name>` if needed.
 | MAP | @10 |
 | Recall | @5, @10 |
 
-RAG metrics (faithfulness, answer relevancy, context recall via `ragas`) are planned for Phase 2 behind a `--rag` flag — no LLM cost unless opted in.
+**RAG metrics** (Phase 2 — implemented):
+
+| Metric | Needs ground truth? | FiQA | nfcorpus |
+|--------|---------------------|------|---------|
+| Faithfulness | No | ✓ | ✓ |
+| Answer Relevancy | No | ✓ | ✓ |
+| Context Recall | Yes | ✓ | — |
+| Context Precision | Yes | ✓ | — |
+
+Run:
+```bash
+cd searchlab-eval
+export SEARCHLAB_LLM_JUDGE_MODEL=gpt-4o-mini   # default; override to use a different judge
+uv run searchlab-eval ragas --dataset fiqa --slice 50
+# → Step 1: POSTs to /rag once per query (uses OPENAI_API_KEY from the service env)
+# → Step 2: runs RAGAS scoring locally
+# → writes results/<run_id>/rag_results.json + rag_scores.json
+```
+
+nfcorpus (two ground-truth-free metrics only):
+```bash
+uv run searchlab-eval ragas --dataset nfcorpus --slice 50
+```
 
 ### Layout
 
@@ -263,11 +285,12 @@ RAG metrics (faithfulness, answer relevancy, context recall via `ragas`) are pla
 searchlab-eval/
 ├── pyproject.toml              # Python 3.12, uv, all deps pinned
 ├── searchlab_eval/
-│   ├── cli.py                  # Click entry point (download/ingest/query/metrics)
+│   ├── cli.py                  # Click entry point (download/ingest/query/metrics/ragas)
 │   ├── downloader.py           # BEIR GenericDataLoader wrapper
 │   ├── slicer.py               # Deterministic query subsetting
 │   ├── ingestor.py             # REST client → POST /api/corpus-ingest
 │   ├── querier.py              # REST client → POST /api/query
+│   ├── rag_eval.py             # Generation (POST /rag) + RAGAS scoring
 │   └── metrics/
 │       └── ir.py               # pytrec_eval wrapper (nDCG, MAP, Recall)
 ├── tests/                      # pytest suite (offline + integration-tagged)
@@ -285,7 +308,7 @@ searchlab-eval/
 | 2 | Ingest — `ingest --dataset <name>` | **Done** |
 | 3 | Query — `query --dataset <name>` → `raw_results.json` | **Done** |
 | 4 | IR metrics — `metrics ir --run-id <id>` → `ir_scores.json` | **Done** |
-| 5 | RAG metrics — faithfulness, answer relevancy, context recall | Planned |
+| 5 | RAG metrics — `ragas --dataset <name>` → `rag_scores.json` | **Done** |
 | 6 | HTML report — self-contained `report.html` | Planned |
 | 7 | End-to-end CLI — `run --dataset <name>` orchestrates 1–6 | Planned |
 | 8 | CI / pytest harness — metric threshold gating | Planned |
@@ -325,7 +348,7 @@ searchlab/
 |-------|-----------|--------|
 | 0 | Pipeline alive — PDF → BM25 hits | **Done** |
 | 1 | RAG loop — BM25 retrieval → LLM generation → grounded answer | **Done** |
-| 2 | RAG evaluation — faithfulness, context recall, answer relevancy (RAGAS) | Planned |
+| 2 | RAG evaluation — faithfulness, answer relevancy, context recall, context precision (RAGAS) | **Done** |
 | 3 | Hybrid / semantic retrieval | Planned |
 | 4+ | Re-ranking, HyDE, query expansion | Backlog |
 
@@ -347,7 +370,8 @@ See `.env.example`.
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `OPENAI_API_KEY` | Yes (for `rag`) | — | OpenAI API key |
-| `SEARCHLAB_LLM_MODEL` | No | `gpt-4o-mini` | LLM model for `rag` command |
+| `SEARCHLAB_LLM_MODEL` | No | `gpt-4o-mini` | LLM model for answer generation |
+| `SEARCHLAB_LLM_JUDGE_MODEL` | No | `gpt-4o-mini` | LLM model used by RAGAS as judge (read by `searchlab-eval ragas`) |
 | `OPENSEARCH_URL` | No | `http://localhost:9200` | OpenSearch connection URL |
 | `SEARCHLAB_INDEX` | No | `searchlab-v0` | Default OpenSearch index name |
 | `SEARCHLAB_URL` | No | `http://localhost:8080` | `searchlab` service URL (used by `searchlab-eval`) |

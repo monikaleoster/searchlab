@@ -6,6 +6,9 @@ from pathlib import Path
 
 import click
 
+_JUDGE_MODEL_ENV = "SEARCHLAB_LLM_JUDGE_MODEL"
+_JUDGE_MODEL_DEFAULT = "gpt-4o-mini"
+
 _DEFAULT_SEARCHLAB_URL = os.getenv("SEARCHLAB_URL", "http://localhost:8080")
 
 _SEARCHLAB_URL_OPTION = click.option(
@@ -179,6 +182,105 @@ def metrics_ir(run_id: str) -> None:
     out_path.write_text(json.dumps(payload, indent=2))
     click.echo(format_table(aggregated))
     click.echo(f"Metrics written to results/{run_id}/ir_scores.json")
+
+
+@cli.command("ragas")
+@click.option("--dataset", "-d", required=True, help="BEIR dataset name (e.g. fiqa, nfcorpus)")
+@click.option(
+    "--slice", "-s", "slice_n",
+    default=50, show_default=True,
+    help="Number of queries to evaluate (0 = all)",
+)
+@click.option("--run-id", default=None, help="Run ID directory name (auto-generated if omitted)")
+@_SEARCHLAB_URL_OPTION
+def ragas_cmd(dataset: str, slice_n: int, run_id: str | None, searchlab_url: str) -> None:
+    """Generate RAG answers via POST /rag and score locally with RAGAS."""
+    from searchlab_eval.querier import load_queries
+    from searchlab_eval.rag_eval import generate, score
+
+    judge_model = os.getenv(_JUDGE_MODEL_ENV, _JUDGE_MODEL_DEFAULT)
+
+    if run_id is None:
+        run_id = f"{dataset}-ragas-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
+
+    run_dir = Path("results") / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    queries_path = Path("data") / dataset / "queries.jsonl"
+    if not queries_path.exists():
+        click.echo(
+            f"Error: queries not found at {queries_path} — run 'searchlab-eval download' first",
+            err=True,
+        )
+        sys.exit(1)
+
+    queries = load_queries(queries_path)
+    original_n = len(queries)
+
+    if slice_n > 0 and slice_n < len(queries):
+        ids = sorted(queries.keys())[:slice_n]
+        queries = {qid: queries[qid] for qid in ids}
+
+    click.echo(f"Dataset:      {dataset}")
+    click.echo(f"Queries:      {len(queries)}/{original_n}")
+    click.echo(f"Run ID:       {run_id}")
+    click.echo(f"Judge model:  {judge_model}  (set {_JUDGE_MODEL_ENV} to override)")
+    click.echo(f"Service URL:  {searchlab_url}")
+    click.echo()
+
+    # ── Step 1: Generation ───────────────────────────────────────────────────
+    click.echo("Step 1/2 — Generating answers via POST /rag …")
+    results = generate(
+        queries=queries,
+        data_dir=Path("data") / dataset,
+        dataset=dataset,
+        searchlab_url=searchlab_url,
+    )
+
+    if not results:
+        click.echo("Error: no results generated — check that the service is running", err=True)
+        sys.exit(1)
+
+    rag_results_path = run_dir / "rag_results.json"
+    rag_results_path.write_text(json.dumps({
+        "run_id":       run_id,
+        "dataset":      dataset,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "per_query":    results,
+    }, indent=2))
+    click.echo(f"Written: results/{run_id}/rag_results.json ({len(results)} queries)")
+    click.echo()
+
+    # ── Step 2: Scoring ──────────────────────────────────────────────────────
+    click.echo(f"Step 2/2 — Scoring with RAGAS (judge: {judge_model}) …")
+    try:
+        aggregate, per_query, measure_names = score(
+            results=results,
+            dataset=dataset,
+            judge_model=judge_model,
+        )
+    except Exception as exc:
+        click.echo(f"Error: RAGAS scoring failed: {exc}", err=True)
+        sys.exit(1)
+
+    rag_scores_path = run_dir / "rag_scores.json"
+    rag_scores_path.write_text(json.dumps({
+        "run_id":      run_id,
+        "dataset":     dataset,
+        "computed_at": datetime.now(timezone.utc).isoformat(),
+        "measures":    measure_names,
+        "judge_model": judge_model,
+        "aggregate":   aggregate,
+        "per_query":   per_query,
+    }, indent=2))
+
+    click.echo()
+    click.echo(f"{'Metric':<22}  {'Score':>7}")
+    click.echo(f"{'-' * 22}  {'-' * 7}")
+    for m in measure_names:
+        click.echo(f"{m:<22}  {aggregate.get(m, 0.0):>7.4f}")
+    click.echo()
+    click.echo(f"Scores written to results/{run_id}/rag_scores.json")
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
