@@ -1,37 +1,29 @@
 import json
-import os
-import re
-import subprocess
 import sys
 from pathlib import Path
 
+import requests
 from tqdm import tqdm
 
-HIT_RE = re.compile(r'^(\d+)\s+([\d.]+)\s+(\S+)\s+(\d+)\s+(.*)$')
 
-
-def _parse_hits(stdout: str) -> list[dict]:
-    hits = []
-    for line in stdout.splitlines():
-        if not line.strip():
-            continue
-        if line.startswith("Rank") or line.startswith("---"):
-            continue
-        if line.startswith("No results found for:"):
-            return []
-        m = HIT_RE.match(line)
-        if m:
-            hits.append({"doc_id": m.group(3), "score": float(m.group(2)), "rank": int(m.group(1))})
-    return hits
-
-
-def run_query(query_text: str, opensearch_url: str, top_k: int, index: str, searchlab_bin: str = "searchlab") -> list[dict]:
-    cmd = [searchlab_bin, "query", query_text, "--top-k", str(top_k)]
-    env = {**os.environ, "OPENSEARCH_URL": opensearch_url, "SEARCHLAB_INDEX": index}
-    proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
-    if proc.returncode != 0:
-        raise RuntimeError(f"searchlab query exited {proc.returncode}: {proc.stderr.strip()}")
-    return _parse_hits(proc.stdout)
+def run_query(query_text: str, searchlab_url: str, top_k: int, dataset: str) -> list[dict]:
+    try:
+        resp = requests.post(
+            f"{searchlab_url}/api/query",
+            data={"query": query_text, "topK": str(top_k), "dataset": dataset},
+            timeout=30,
+        )
+    except requests.exceptions.ConnectionError:
+        raise RuntimeError(f"searchlab service unreachable at {searchlab_url}")
+    if not resp.ok:
+        raise RuntimeError(f"query failed HTTP {resp.status_code}: {resp.text[:200]}")
+    data = resp.json()
+    if "error" in data:
+        raise RuntimeError(data["error"])
+    return [
+        {"doc_id": h["doc_id"], "score": h["score"], "rank": h["rank"]}
+        for h in data.get("hits", [])
+    ]
 
 
 def load_queries(queries_path: Path) -> dict[str, str]:
@@ -45,11 +37,16 @@ def load_queries(queries_path: Path) -> dict[str, str]:
     return queries
 
 
-def run_queries(queries: dict[str, str], opensearch_url: str, top_k: int, index: str, searchlab_bin: str = "searchlab") -> dict[str, list[dict]]:
+def run_queries(
+    queries: dict[str, str],
+    searchlab_url: str,
+    top_k: int,
+    dataset: str,
+) -> dict[str, list[dict]]:
     results = {}
     for query_id, text in tqdm(queries.items(), desc="Querying", unit="q"):
         try:
-            results[query_id] = run_query(text, opensearch_url, top_k, index=index, searchlab_bin=searchlab_bin)
+            results[query_id] = run_query(text, searchlab_url, top_k, dataset)
         except RuntimeError as e:
             print(f"Warning: query {query_id!r} failed: {e}", file=sys.stderr)
             results[query_id] = []

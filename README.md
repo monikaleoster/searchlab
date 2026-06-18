@@ -13,13 +13,13 @@ A public learning lab for hands-on search engineering. Each phase ships one meas
 | Tool | Version |
 |------|---------|
 | Docker + Docker Compose | any recent |
-| JDK | 21+ |
-| Maven | 3.9+ |
+| Python | 3.12+ |
+| uv | any recent |
 
 Verify:
 ```bash
-java --version   # must be 21.x
-mvn --version
+python3 --version   # must be 3.12.x or higher
+uv --version
 docker --version
 ```
 
@@ -42,11 +42,10 @@ curl http://localhost:9200
 
 > **Note:** Security is disabled. This is a local dev setup — do not expose port 9200 externally.
 
-### 2. Build the JAR
+### 2. Install the Python package
 
 ```bash
-mvn package -q
-# → target/searchlab.jar (~22 MB fat JAR)
+cd service && uv sync
 ```
 
 ### 3. Ingest the sample PDF
@@ -162,15 +161,15 @@ OPENAI_API_KEY=sk-... ./run-smoke.sh
 
 ### Phase 0 — Ingestion & BM25 retrieval
 
-1. **PDFBox 3.x** extracts per-page text from the PDF.
-2. **jtokkit** (`cl100k_base`) tokenizes the concatenated text and slices it into 512-token windows.
+1. **pymupdf** extracts per-page text from the PDF.
+2. **tiktoken** (`cl100k_base`) tokenizes the concatenated text and slices it into 512-token windows.
 3. Each chunk gets a deterministic ID: `sha256(filename + ":" + position)[:16]` — re-ingesting overwrites, never duplicates.
 4. **OpenSearch `match` query** against `chunk_text` returns BM25-ranked results.
 
 ### Phase 1 — RAG pipeline
 
-1. `rag` calls the existing BM25 retrieval (`Bm25Searcher`) directly — no subprocess.
-2. **`ContextBuilder`** formats the top-K hits as numbered passages: `[N] filename: snippet`.
+1. `rag` calls the existing BM25 retrieval directly — no subprocess.
+2. **`context_builder`** formats the top-K hits as numbered passages: `[N] filename: snippet`.
 3. A two-part prompt is sent to the OpenAI Chat Completions API:
    - **System:** _"You are a search assistant. Answer the question using only the provided passages."_
    - **User:** the formatted passages block + the question
@@ -191,7 +190,9 @@ OPENAI_API_KEY=sk-... ./run-smoke.sh
 
 ## Evaluation (`searchlab-eval`)
 
-`searchlab-eval` is a standalone Python harness that measures search quality against [BEIR](https://github.com/beir-cellar/beir) benchmark datasets. It drives the `searchlab` CLI as a subprocess — no internal imports, only the published interface.
+`searchlab-eval` is a standalone Python harness that measures search quality against [BEIR](https://github.com/beir-cellar/beir) benchmark datasets. It communicates with the `searchlab` REST API — no direct OpenSearch access, no subprocess calls.
+
+**Prerequisite:** the `searchlab` service must be running (`./searchlab serve`) before running `ingest` or `query` commands.
 
 ### Additional prerequisites
 
@@ -203,15 +204,15 @@ OPENAI_API_KEY=sk-... ./run-smoke.sh
 ### Quick start
 
 ```bash
+# Start the searchlab service (in a separate terminal)
+./searchlab serve
+
 cd searchlab-eval
 
 # Download a BEIR dataset (nfcorpus = smallest, ~3 500 docs)
 uv run searchlab-eval download --dataset nfcorpus
 
-# Build the JAR and seed the index (skip if you already ran the main quick start)
-cd .. && mvn package -q && ./searchlab ingest test-corpus/sample.pdf && cd searchlab-eval
-
-# Ingest corpus into OpenSearch — goes into index searchlab-nfcorpus
+# Ingest corpus via the searchlab REST API
 uv run searchlab-eval ingest --dataset nfcorpus
 
 # Run evaluation queries and collect ranked results
@@ -224,6 +225,8 @@ uv run searchlab-eval metrics ir --run-id <run_id>
 ```
 
 Use `--slice N` on `download` to limit to N queries for fast local iteration (default 100).
+
+The `SEARCHLAB_URL` environment variable (default `http://localhost:8080`) controls which service the eval harness talks to. Pass `--searchlab-url` to override per-command.
 
 ### Multiple datasets
 
@@ -252,7 +255,7 @@ Override the index name with `--index <name>` if needed.
 | MAP | @10 |
 | Recall | @5, @10 |
 
-RAG metrics (faithfulness, answer relevancy, context recall via `ragas`) are planned for Phase 5 behind a `--rag` flag — no LLM cost unless opted in.
+RAG metrics (faithfulness, answer relevancy, context recall via `ragas`) are planned for Phase 2 behind a `--rag` flag — no LLM cost unless opted in.
 
 ### Layout
 
@@ -263,8 +266,8 @@ searchlab-eval/
 │   ├── cli.py                  # Click entry point (download/ingest/query/metrics)
 │   ├── downloader.py           # BEIR GenericDataLoader wrapper
 │   ├── slicer.py               # Deterministic query subsetting
-│   ├── ingestor.py             # OpenSearch _bulk ingest
-│   ├── querier.py              # Query loop + result collection
+│   ├── ingestor.py             # REST client → POST /api/corpus-ingest
+│   ├── querier.py              # REST client → POST /api/query
 │   └── metrics/
 │       └── ir.py               # pytrec_eval wrapper (nDCG, MAP, Recall)
 ├── tests/                      # pytest suite (offline + integration-tagged)
@@ -296,28 +299,22 @@ searchlab/
 ├── CONSTITUTION.md             # non-negotiable project principles
 ├── README.md
 ├── docker-compose.yml          # OpenSearch 2.19.0, single-node, dev-only
-├── pom.xml                     # Java 21, Maven, all deps pinned
-├── searchlab                   # shell wrapper → target/searchlab.jar
+├── searchlab                   # shell wrapper → service/ Python package
 ├── run-smoke.sh                # acceptance test (Phase 0 + Phase 1 RAG check)
 ├── test-corpus/sample.pdf      # public-domain RFC 1149 (IP over Avian Carriers)
 ├── specs/                      # per-phase requirements and plans
-├── searchlab-eval/             # Python evaluation harness (see above)
-└── src/main/java/com/searchlab/
-    ├── Main.java
-    ├── cli/
-    │   ├── IngestCommand.java  # ./searchlab ingest
-    │   ├── QueryCommand.java   # ./searchlab query
-    │   ├── RagCommand.java     # ./searchlab rag  (Phase 1)
-    │   └── WebCommand.java     # ./searchlab serve (Phase 1)
-    ├── ingest/                 # PdfParser, Chunker, Indexer, ChunkId
-    ├── rag/
-    │   ├── ContextBuilder.java # formats SearchHit list → numbered passage block
-    │   ├── LlmClient.java      # OpenAI Chat Completions (java.net.http, temp=0)
-    │   ├── LlmApiException.java
-    │   ├── LlmTimeoutException.java
-    │   └── RagResult.java      # shared result record (answer, sources, error)
-    ├── search/                 # Bm25Searcher, SearchHit
-    └── opensearch/             # OpenSearchClientFactory, IndexBootstrap
+├── service/                    # Python FastAPI service + CLI
+│   ├── pyproject.toml
+│   └── searchlab/
+│       ├── main.py             # FastAPI app factory
+│       ├── config.py           # env var resolution
+│       ├── cli.py              # Click CLI: ingest, query, rag, serve
+│       ├── opensearch/         # client factory, index bootstrap
+│       ├── ingest/             # pdf_parser (pymupdf), chunker (tiktoken), indexer
+│       ├── search/             # bm25_searcher
+│       ├── rag/                # context_builder, llm_client, models
+│       └── web/                # FastAPI routes, embedded HTML UI
+└── searchlab-eval/             # Python evaluation harness (see above)
 ```
 
 ---
@@ -351,7 +348,6 @@ See `.env.example`.
 |----------|----------|---------|-------------|
 | `OPENAI_API_KEY` | Yes (for `rag`) | — | OpenAI API key |
 | `SEARCHLAB_LLM_MODEL` | No | `gpt-4o-mini` | LLM model for `rag` command |
-| `OPENSEARCH_HOST` | No | `localhost` | OpenSearch host |
-| `OPENSEARCH_PORT` | No | `9200` | OpenSearch port |
-
-Phase 0 required none of these — OpenSearch runs unauthenticated locally. Phase 1 adds `OPENAI_API_KEY` for the `rag` command.
+| `OPENSEARCH_URL` | No | `http://localhost:9200` | OpenSearch connection URL |
+| `SEARCHLAB_INDEX` | No | `searchlab-v0` | Default OpenSearch index name |
+| `SEARCHLAB_URL` | No | `http://localhost:8080` | `searchlab` service URL (used by `searchlab-eval`) |

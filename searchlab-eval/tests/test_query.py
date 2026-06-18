@@ -1,40 +1,58 @@
 import json
-import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 
-from searchlab_eval.querier import _parse_hits, load_queries, run_queries, run_query
-
-NORMAL_OUTPUT = (
-    "Rank  Score    Source                          Page  Snippet\n"
-    "----------------------------------------------------------------------------------------------------\n"
-    "1     0.6442   doc-abc                         0     Some snippet text here\n"
-    "2     0.4716   doc-xyz                         0     Another snippet\n"
-)
+from searchlab_eval.querier import load_queries, run_queries, run_query
 
 
-def test_parse_hits_normal():
-    hits = _parse_hits(NORMAL_OUTPUT)
-    assert len(hits) == 2
-    assert hits[0] == {"doc_id": "doc-abc", "score": 0.6442, "rank": 1}
-    assert hits[1] == {"doc_id": "doc-xyz", "score": 0.4716, "rank": 2}
+def _make_hits_response(hits: list[dict]) -> MagicMock:
+    resp = MagicMock()
+    resp.ok = True
+    resp.json.return_value = {"hits": hits, "index": "searchlab-test"}
+    return resp
 
 
-def test_parse_hits_no_results():
-    hits = _parse_hits("No results found for: some query")
-    assert hits == []
+# ── run_query ────────────────────────────────────────────────────────
+
+def test_run_query_maps_doc_id():
+    hits = [
+        {"rank": 1, "score": 0.9, "doc_id": "MED-10", "filename": "MED-10", "page": 0, "snippet": "..."},
+        {"rank": 2, "score": 0.5, "doc_id": "MED-20", "filename": "MED-20", "page": 0, "snippet": "..."},
+    ]
+    with patch("requests.post", return_value=_make_hits_response(hits)):
+        result = run_query("test query", "http://localhost:8080", 10, "nfcorpus")
+
+    assert result == [
+        {"doc_id": "MED-10", "score": 0.9, "rank": 1},
+        {"doc_id": "MED-20", "score": 0.5, "rank": 2},
+    ]
 
 
-def test_parse_hits_empty_output():
-    assert _parse_hits("") == []
-    header_only = (
-        "Rank  Score    Source                          Page  Snippet\n"
-        "----------------------------------------------------------------------------------------------------\n"
-    )
-    assert _parse_hits(header_only) == []
+def test_run_query_service_unreachable():
+    with patch("requests.post", side_effect=requests.exceptions.ConnectionError):
+        with pytest.raises(RuntimeError, match="unreachable"):
+            run_query("test query", "http://localhost:8080", 10, "nfcorpus")
 
+
+def test_run_query_error_in_response():
+    resp = MagicMock()
+    resp.ok = True
+    resp.json.return_value = {"error": "index not found"}
+    with patch("requests.post", return_value=resp):
+        with pytest.raises(RuntimeError, match="index not found"):
+            run_query("test query", "http://localhost:8080", 10, "nfcorpus")
+
+
+def test_run_query_empty_results():
+    with patch("requests.post", return_value=_make_hits_response([])):
+        result = run_query("test query", "http://localhost:8080", 10, "nfcorpus")
+    assert result == []
+
+
+# ── load_queries ─────────────────────────────────────────────────────
 
 def test_load_queries_missing_file():
     with pytest.raises(FileNotFoundError):
@@ -51,32 +69,26 @@ def test_load_queries_content(tmp_path):
     queries_file.write_text("\n".join(json.dumps(r) for r in rows) + "\n")
 
     result = load_queries(queries_file)
-    assert result == {"q1": "What is oxygen?", "q2": "Hypoxia treatment", "q3": "Cancer immunotherapy"}
+    assert result == {
+        "q1": "What is oxygen?",
+        "q2": "Hypoxia treatment",
+        "q3": "Cancer immunotherapy",
+    }
 
 
-def test_run_query_nonzero_exit():
-    mock_proc = MagicMock()
-    mock_proc.returncode = 1
-    mock_proc.stderr = "connection refused"
-
-    with patch("subprocess.run", return_value=mock_proc):
-        with pytest.raises(RuntimeError, match="exited 1"):
-            run_query("test query", "http://localhost:9200", 10)
-
+# ── run_queries ──────────────────────────────────────────────────────
 
 def test_run_queries_continues_on_error():
     queries = {"q1": "first query", "q2": "second query"}
 
-    def fake_run_query(text, url, top_k):
+    def fake_run_query(text, url, top_k, dataset):
         if text == "first query":
             raise RuntimeError("connection failed")
         return [{"doc_id": "doc-1", "score": 0.9, "rank": 1}]
 
     with patch("searchlab_eval.querier.run_query", side_effect=fake_run_query):
-        results = run_queries(queries, "http://localhost:9200", 10)
+        results = run_queries(queries, "http://localhost:8080", 10, dataset="nfcorpus")
 
-    assert "q1" in results
-    assert "q2" in results
     assert results["q1"] == []
     assert results["q2"] == [{"doc_id": "doc-1", "score": 0.9, "rank": 1}]
 
@@ -90,7 +102,6 @@ def test_query_nfcorpus(tmp_path):
     all_queries = load_queries(queries_path)
     slice_queries = dict(list(all_queries.items())[:3])
 
-    results = run_queries(slice_queries, "http://localhost:9200", top_k=5)
-
+    results = run_queries(slice_queries, "http://localhost:8080", top_k=5, dataset="nfcorpus")
     assert set(results.keys()) == set(slice_queries.keys())
     assert any(len(v) > 0 for v in results.values())

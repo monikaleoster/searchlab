@@ -1,12 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-JAR="$SCRIPT_DIR/target/searchlab.jar"
-
-if [[ ! -f "$JAR" ]]; then
-    echo "JAR not found at $JAR — run: mvn package" >&2
-    exit 1
-fi
-
-exec java -jar "$JAR" "$@"
+cd "$(dirname "${BASH_SOURCE[0]}")/service"
+exec uv run searchlab "$@"

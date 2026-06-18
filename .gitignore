@@ -1,8 +1,15 @@
-target/
 .env
-*.class
 *.log
 .DS_Store
 .idea/
-*.iml
 files/keys
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+
+# posts (drafts)
+posts/
