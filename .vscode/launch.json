@@ -1,0 +1,46 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "SearchLab: serve",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": ["searchlab.main:app", "--host", "0.0.0.0", "--port", "8080"],
+            "cwd": "${workspaceFolder}/service",
+            "python": "${workspaceFolder}/service/.venv/bin/python",
+            "console": "integratedTerminal",
+            "jinja": true
+        },
+        {
+            "name": "SearchLab: rag",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "searchlab.cli",
+            "args": ["rag", "your question here"],
+            "cwd": "${workspaceFolder}/service",
+            "python": "${workspaceFolder}/service/.venv/bin/python",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "SearchLab: ingest",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "searchlab.cli",
+            "args": ["ingest", "/path/to/your.pdf"],
+            "cwd": "${workspaceFolder}/service",
+            "python": "${workspaceFolder}/service/.venv/bin/python",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "SearchLab: query",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "searchlab.cli",
+            "args": ["query", "your question here"],
+            "cwd": "${workspaceFolder}/service",
+            "python": "${workspaceFolder}/service/.venv/bin/python",
+            "console": "integratedTerminal"
+        }
+    ]
+}

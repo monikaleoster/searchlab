@@ -63,5 +63,20 @@ if [[ "$COUNT2" -ne "$COUNT" ]]; then
 fi
 pass "Chunk count unchanged after re-ingest: $COUNT2"
 
+
+# ── Check 5: RAG returns non-empty output (skipped if OPENAI_API_KEY is absent) ─
+echo
+echo "Check 5: RAG command returns non-empty output against nfcorpus"
+
+if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+    echo "[SKIP] OPENAI_API_KEY not set — skipping RAG smoke test"
+else
+    ./searchlab rag "what is nfcorpus about" | tee /tmp/rag_output.txt
+    if [[ ! -s /tmp/rag_output.txt ]]; then
+        fail "RAG command produced no output"
+    fi
+    pass "RAG command returned non-empty output"
+fi
+
 echo
 echo "=== All checks passed ==="

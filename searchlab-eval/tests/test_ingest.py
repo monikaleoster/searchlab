@@ -5,40 +5,29 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from searchlab_eval.ingestor import (
-    _build_bulk_body,
-    _post_bulk,
-    get_doc_count,
-    ingest_corpus,
-)
+from searchlab_eval.ingestor import ingest_corpus
 
 
-# ── unit tests (no network) ──────────────────────────────────────────────────
+def _make_response(indexed: int = 3) -> MagicMock:
+    resp = MagicMock()
+    resp.ok = True
+    resp.json.return_value = {"indexed": indexed}
+    return resp
 
-def test_bulk_body_format():
-    docs = [
-        {"_id": "doc1", "title": "Hello", "text": "World"},
-        {"_id": "doc2", "title": "Foo", "text": "Bar"},
-    ]
-    body = _build_bulk_body(docs, "2026-01-01T00:00:00+00:00")
-    lines = [l for l in body.split("\n") if l]
-    assert len(lines) == 4  # 2 action lines + 2 doc lines
 
-    action = json.loads(lines[0])
-    assert action == {"index": {"_index": "searchlab-v0", "_id": "doc1"}}
+def test_ingest_corpus_single_batch(tmp_path):
+    corpus_file = tmp_path / "corpus.jsonl"
+    docs = [{"_id": str(i), "title": f"T{i}", "text": f"B{i}"} for i in range(3)]
+    corpus_file.write_text("\n".join(json.dumps(d) for d in docs) + "\n")
 
-    doc = json.loads(lines[1])
-    assert doc["chunk_id"] == "doc1"
-    assert doc["chunk_text"] == "Hello World"
-    assert doc["source_filename"] == "doc1"
-    assert doc["page_number"] == 0
-    assert doc["chunk_position"] == 0
+    with patch("requests.post", return_value=_make_response(3)) as mock_post:
+        total = ingest_corpus(corpus_file, "http://localhost:8080", index="searchlab-test")
 
-    action2 = json.loads(lines[2])
-    assert action2["index"]["_id"] == "doc2"
-
-    doc2 = json.loads(lines[3])
-    assert doc2["chunk_text"] == "Foo Bar"
+    assert total == 3
+    mock_post.assert_called_once()
+    call_kwargs = mock_post.call_args
+    assert call_kwargs.kwargs["params"] == {"index": "searchlab-test"}
+    assert len(call_kwargs.kwargs["json"]) == 3
 
 
 def test_batch_splitting(tmp_path):
@@ -47,63 +36,53 @@ def test_batch_splitting(tmp_path):
         for i in range(1200):
             fh.write(json.dumps({"_id": str(i), "title": f"T{i}", "text": f"B{i}"}) + "\n")
 
-    call_args = []
+    call_counts = []
 
-    def fake_post_bulk(url, body):
-        call_args.append(body)
+    def fake_post(url, params, json, timeout):
+        call_counts.append(len(json))
+        resp = MagicMock()
+        resp.ok = True
+        resp.json.return_value = {"indexed": len(json)}
+        return resp
 
-    with patch("searchlab_eval.ingestor._post_bulk", side_effect=fake_post_bulk):
-        total = ingest_corpus(corpus_file, "http://localhost:9200")
+    with patch("requests.post", side_effect=fake_post):
+        total = ingest_corpus(corpus_file, "http://localhost:8080", index="searchlab-test")
 
-    assert len(call_args) == 3  # ceil(1200 / 500)
+    assert len(call_counts) == 3  # ceil(1200 / 500)
     assert total == 1200
 
 
 def test_missing_corpus_raises():
     with pytest.raises(FileNotFoundError):
-        ingest_corpus(Path("nonexistent.jsonl"), "http://localhost:9200")
+        ingest_corpus(Path("nonexistent.jsonl"), "http://localhost:8080", index="x")
 
 
-def test_opensearch_unreachable(tmp_path):
+def test_service_unreachable(tmp_path):
     corpus_file = tmp_path / "corpus.jsonl"
-    corpus_file.write_text(
-        json.dumps({"_id": "1", "title": "T", "text": "B"}) + "\n"
-    )
+    corpus_file.write_text(json.dumps({"_id": "1", "title": "T", "text": "B"}) + "\n")
 
     with patch("requests.post", side_effect=requests.exceptions.ConnectionError):
         with pytest.raises(RuntimeError, match="unreachable"):
-            ingest_corpus(corpus_file, "http://localhost:9200")
+            ingest_corpus(corpus_file, "http://localhost:8080", index="x")
 
 
-def test_bulk_errors_raise(tmp_path):
+def test_error_in_response_raises(tmp_path):
     corpus_file = tmp_path / "corpus.jsonl"
-    corpus_file.write_text(
-        json.dumps({"_id": "1", "title": "T", "text": "B"}) + "\n"
-    )
+    corpus_file.write_text(json.dumps({"_id": "1", "title": "T", "text": "B"}) + "\n")
 
-    mock_resp = MagicMock()
-    mock_resp.ok = True
-    mock_resp.json.return_value = {
-        "errors": True,
-        "items": [{"index": {"error": {"reason": "mapping error"}}}],
-    }
+    bad_resp = MagicMock()
+    bad_resp.ok = True
+    bad_resp.json.return_value = {"error": "index mapping error"}
 
-    with patch("requests.post", return_value=mock_resp):
-        with pytest.raises(RuntimeError, match="mapping error"):
-            ingest_corpus(corpus_file, "http://localhost:9200")
+    with patch("requests.post", return_value=bad_resp):
+        with pytest.raises(RuntimeError, match="index mapping error"):
+            ingest_corpus(corpus_file, "http://localhost:8080", index="x")
 
-
-# ── integration test (requires running OpenSearch) ────────────────────────────
 
 @pytest.mark.integration
 def test_ingest_nfcorpus():
     corpus_path = Path("data/nfcorpus/corpus.jsonl")
     if not corpus_path.exists():
         pytest.skip("data/nfcorpus/corpus.jsonl not present — run download first")
-
-    url = "http://localhost:9200"
-    n_ingested = ingest_corpus(corpus_path, url)
+    n_ingested = ingest_corpus(corpus_path, "http://localhost:8080", index="searchlab-nfcorpus")
     assert n_ingested > 0
-
-    n_count = get_doc_count(url)
-    assert n_count >= n_ingested

@@ -4,6 +4,8 @@ A public learning lab for hands-on search engineering. Each phase ships one meas
 
 **Phase 0 — Pipeline Alive:** PDF → chunks → BM25 hits. No magic, just plumbing.
 
+**Phase 1 — RAG Loop:** BM25 retrieval → context assembly → OpenAI generation → grounded answer with sources.
+
 ---
 
 ## Prerequisites
@@ -11,13 +13,13 @@ A public learning lab for hands-on search engineering. Each phase ships one meas
 | Tool | Version |
 |------|---------|
 | Docker + Docker Compose | any recent |
-| JDK | 21+ |
-| Maven | 3.9+ |
+| Python | 3.12+ |
+| uv | any recent |
 
 Verify:
 ```bash
-java --version   # must be 21.x
-mvn --version
+python3 --version   # must be 3.12.x or higher
+uv --version
 docker --version
 ```
 
@@ -40,11 +42,10 @@ curl http://localhost:9200
 
 > **Note:** Security is disabled. This is a local dev setup — do not expose port 9200 externally.
 
-### 2. Build the JAR
+### 2. Install the Python package
 
 ```bash
-mvn package -q
-# → target/searchlab.jar (~22 MB fat JAR)
+cd service && uv sync
 ```
 
 ### 3. Ingest the sample PDF
@@ -82,32 +83,116 @@ Rank  Score    Source                          Page  Snippet
     BM25 search against indexed chunks.
     Prints: rank | score | source | page | 200-char snippet
     Default top-k: 5
+
+./searchlab rag "<question>" [--top-k N] [--model <model>]
+    Retrieve top-K passages via BM25, assemble them into a prompt,
+    call the OpenAI API, and print the generated answer with sources.
+    Requires OPENAI_API_KEY environment variable.
+    Default top-k: 5. Default model: gpt-4o-mini (override via --model or SEARCHLAB_LLM_MODEL).
+
+./searchlab serve [--port N]
+    Launch a local web UI at http://localhost:8080.
+    Tabs: RAG (with dataset selector) | Query | Ingest | Eval | Metrics
+    RAG tab: select nfcorpus, FiQA-2018, or the default index, enter a question,
+    get a grounded LLM answer with source attribution.
+    Eval tab: download / ingest / query / compute metrics via live log stream.
+    Metrics tab: per-query sortable table, compare two runs side-by-side.
+    Default port: 8080. Requires OPENAI_API_KEY for the RAG tab.
 ```
+
+### `rag` example
+
+```bash
+export OPENAI_API_KEY=sk-...
+./searchlab rag "what is dollar cost averaging" --top-k 5
+```
+
+Expected output:
+```
+Answer:
+Dollar cost averaging is an investment strategy where an investor divides
+the total amount to be invested across periodic purchases of a target asset
+in order to reduce the impact of volatility on the overall purchase.
+
+Sources:
+  [1] fiqa-corpus/doc_2847.txt  (score: 0.821)
+  [2] fiqa-corpus/doc_1203.txt  (score: 0.764)
+  [3] fiqa-corpus/doc_0091.txt  (score: 0.701)
+```
+
+### `serve` example
+
+```bash
+export OPENAI_API_KEY=sk-...
+./searchlab serve
+# → SearchLab UI → http://localhost:8080
+```
+
+Open `http://localhost:8080` in a browser. The page shows:
+- A question input that POSTs to the RAG pipeline (no page reload)
+- The generated answer and source citations
+- IR evaluation metric tables (nDCG, Recall, MAP) auto-loaded from `searchlab-eval/results/`
 
 ---
 
 ## Smoke test
 
-Runs all Phase 0 acceptance checks (ingest, query, idempotency) and exits 0:
+Runs all acceptance checks and exits 0:
 
 ```bash
 ./run-smoke.sh
 ```
 
+Checks performed:
+1. OpenSearch reachable
+2. Ingest a PDF → chunk count > 0
+3. Query returns ranked results
+4. Re-ingest is idempotent
+5. `rag` command returns non-empty output (skipped if `OPENAI_API_KEY` is absent)
+
+```bash
+# Run with RAG smoke check enabled
+OPENAI_API_KEY=sk-... ./run-smoke.sh
+```
+
 ---
 
-## How it works (Phase 0)
+## How it works
 
-1. **PDFBox 3.x** extracts per-page text from the PDF.
-2. **jtokkit** (`cl100k_base`) tokenizes the concatenated text and slices it into 512-token windows.
+### Phase 0 — Ingestion & BM25 retrieval
+
+1. **pymupdf** extracts per-page text from the PDF.
+2. **tiktoken** (`cl100k_base`) tokenizes the concatenated text and slices it into 512-token windows.
 3. Each chunk gets a deterministic ID: `sha256(filename + ":" + position)[:16]` — re-ingesting overwrites, never duplicates.
 4. **OpenSearch `match` query** against `chunk_text` returns BM25-ranked results.
+
+### Phase 1 — RAG pipeline
+
+1. `rag` calls the existing BM25 retrieval directly — no subprocess.
+2. **`context_builder`** formats the top-K hits as numbered passages: `[N] filename: snippet`.
+3. A two-part prompt is sent to the OpenAI Chat Completions API:
+   - **System:** _"You are a search assistant. Answer the question using only the provided passages."_
+   - **User:** the formatted passages block + the question
+4. Temperature is fixed at `0` for reproducible outputs (required for Phase 2 benchmarking).
+5. The answer is printed with source attribution (filename, rank, BM25 score).
+
+#### Error handling
+
+| Scenario | Behaviour |
+|---|---|
+| Missing `OPENAI_API_KEY` | Print clear message, exit 1 |
+| Empty retrieval results | Print "No passages retrieved", exit 0 (skip LLM) |
+| LLM API error (4xx/5xx) | Print HTTP status + message, exit 1 |
+| LLM timeout (> 30 s) | Print timeout message, exit 1 |
+| OpenSearch unavailable | Human-readable connection error, exit 1 |
 
 ---
 
 ## Evaluation (`searchlab-eval`)
 
-`searchlab-eval` is a standalone Python harness that measures search quality against [BEIR](https://github.com/beir-cellar/beir) benchmark datasets. It drives the `searchlab` CLI as a subprocess — no internal imports, only the published interface.
+`searchlab-eval` is a standalone Python harness that measures search quality against [BEIR](https://github.com/beir-cellar/beir) benchmark datasets. It communicates with the `searchlab` REST API — no direct OpenSearch access, no subprocess calls.
+
+**Prerequisite:** the `searchlab` service must be running (`./searchlab serve`) before running `ingest` or `query` commands.
 
 ### Additional prerequisites
 
@@ -119,15 +204,15 @@ Runs all Phase 0 acceptance checks (ingest, query, idempotency) and exits 0:
 ### Quick start
 
 ```bash
+# Start the searchlab service (in a separate terminal)
+./searchlab serve
+
 cd searchlab-eval
 
 # Download a BEIR dataset (nfcorpus = smallest, ~3 500 docs)
 uv run searchlab-eval download --dataset nfcorpus
 
-# Build the JAR and seed the index (skip if you already ran the main quick start)
-cd .. && mvn package -q && ./searchlab ingest test-corpus/sample.pdf && cd searchlab-eval
-
-# Ingest corpus into OpenSearch — goes into index searchlab-nfcorpus
+# Ingest corpus via the searchlab REST API
 uv run searchlab-eval ingest --dataset nfcorpus
 
 # Run evaluation queries and collect ranked results
@@ -140,6 +225,8 @@ uv run searchlab-eval metrics ir --run-id <run_id>
 ```
 
 Use `--slice N` on `download` to limit to N queries for fast local iteration (default 100).
+
+The `SEARCHLAB_URL` environment variable (default `http://localhost:8080`) controls which service the eval harness talks to. Pass `--searchlab-url` to override per-command.
 
 ### Multiple datasets
 
@@ -168,7 +255,29 @@ Override the index name with `--index <name>` if needed.
 | MAP | @10 |
 | Recall | @5, @10 |
 
-RAG metrics (faithfulness, answer relevancy, context recall via `ragas`) are planned for Phase 5 behind a `--rag` flag — no LLM cost unless opted in.
+**RAG metrics** (Phase 2 — implemented):
+
+| Metric | Needs ground truth? | FiQA | nfcorpus |
+|--------|---------------------|------|---------|
+| Faithfulness | No | ✓ | ✓ |
+| Answer Relevancy | No | ✓ | ✓ |
+| Context Recall | Yes | ✓ | — |
+| Context Precision | Yes | ✓ | — |
+
+Run:
+```bash
+cd searchlab-eval
+export SEARCHLAB_LLM_JUDGE_MODEL=gpt-4o-mini   # default; override to use a different judge
+uv run searchlab-eval ragas --dataset fiqa --slice 50
+# → Step 1: POSTs to /rag once per query (uses OPENAI_API_KEY from the service env)
+# → Step 2: runs RAGAS scoring locally
+# → writes results/<run_id>/rag_results.json + rag_scores.json
+```
+
+nfcorpus (two ground-truth-free metrics only):
+```bash
+uv run searchlab-eval ragas --dataset nfcorpus --slice 50
+```
 
 ### Layout
 
@@ -176,11 +285,12 @@ RAG metrics (faithfulness, answer relevancy, context recall via `ragas`) are pla
 searchlab-eval/
 ├── pyproject.toml              # Python 3.12, uv, all deps pinned
 ├── searchlab_eval/
-│   ├── cli.py                  # Click entry point (download/ingest/query/metrics)
+│   ├── cli.py                  # Click entry point (download/ingest/query/metrics/ragas)
 │   ├── downloader.py           # BEIR GenericDataLoader wrapper
 │   ├── slicer.py               # Deterministic query subsetting
-│   ├── ingestor.py             # OpenSearch _bulk ingest
-│   ├── querier.py              # Query loop + result collection
+│   ├── ingestor.py             # REST client → POST /api/corpus-ingest
+│   ├── querier.py              # REST client → POST /api/query
+│   ├── rag_eval.py             # Generation (POST /rag) + RAGAS scoring
 │   └── metrics/
 │       └── ir.py               # pytrec_eval wrapper (nDCG, MAP, Recall)
 ├── tests/                      # pytest suite (offline + integration-tagged)
@@ -198,7 +308,7 @@ searchlab-eval/
 | 2 | Ingest — `ingest --dataset <name>` | **Done** |
 | 3 | Query — `query --dataset <name>` → `raw_results.json` | **Done** |
 | 4 | IR metrics — `metrics ir --run-id <id>` → `ir_scores.json` | **Done** |
-| 5 | RAG metrics — faithfulness, answer relevancy, context recall | Planned |
+| 5 | RAG metrics — `ragas --dataset <name>` → `rag_scores.json` | **Done** |
 | 6 | HTML report — self-contained `report.html` | Planned |
 | 7 | End-to-end CLI — `run --dataset <name>` orchestrates 1–6 | Planned |
 | 8 | CI / pytest harness — metric threshold gating | Planned |
@@ -212,18 +322,22 @@ searchlab/
 ├── CONSTITUTION.md             # non-negotiable project principles
 ├── README.md
 ├── docker-compose.yml          # OpenSearch 2.19.0, single-node, dev-only
-├── pom.xml                     # Java 21, Maven, all deps pinned
-├── searchlab                   # shell wrapper → target/searchlab.jar
-├── run-smoke.sh                # Phase 0 acceptance test
+├── searchlab                   # shell wrapper → service/ Python package
+├── run-smoke.sh                # acceptance test (Phase 0 + Phase 1 RAG check)
 ├── test-corpus/sample.pdf      # public-domain RFC 1149 (IP over Avian Carriers)
-├── specs/phase-0/              # spec.md, plan.md, tasks.md
-├── searchlab-eval/             # Python evaluation harness (see above)
-└── src/main/java/com/searchlab/
-    ├── Main.java
-    ├── cli/                    # IngestCommand, QueryCommand (Picocli)
-    ├── ingest/                 # PdfParser, Chunker, Indexer, ChunkId
-    ├── search/                 # Bm25Searcher
-    └── opensearch/             # OpenSearchClientFactory, IndexBootstrap
+├── specs/                      # per-phase requirements and plans
+├── service/                    # Python FastAPI service + CLI
+│   ├── pyproject.toml
+│   └── searchlab/
+│       ├── main.py             # FastAPI app factory
+│       ├── config.py           # env var resolution
+│       ├── cli.py              # Click CLI: ingest, query, rag, serve
+│       ├── opensearch/         # client factory, index bootstrap
+│       ├── ingest/             # pdf_parser (pymupdf), chunker (tiktoken), indexer
+│       ├── search/             # bm25_searcher
+│       ├── rag/                # context_builder, llm_client, models
+│       └── web/                # FastAPI routes, embedded HTML UI
+└── searchlab-eval/             # Python evaluation harness (see above)
 ```
 
 ---
@@ -233,11 +347,31 @@ searchlab/
 | Phase | Objective | Status |
 |-------|-----------|--------|
 | 0 | Pipeline alive — PDF → BM25 hits | **Done** |
-| 1 | Evaluation loop — BEIR datasets + IR metrics baseline | **In progress** |
-| 2+ | Retrieval improvements | Backlog |
+| 1 | RAG loop — BM25 retrieval → LLM generation → grounded answer | **Done** |
+| 2 | RAG evaluation — faithfulness, answer relevancy, context recall, context precision (RAGAS) | **Done** |
+| 3 | Hybrid / semantic retrieval | Planned |
+| 4+ | Re-ranking, HyDE, query expansion | Backlog |
+
+### Phase 1 baseline IR numbers (BM25, no re-ranking)
+
+| Dataset | nDCG@10 | Recall@10 | MAP@10 |
+|---------|---------|-----------|--------|
+| nfcorpus | 0.328 | 0.140 | 0.122 |
+| FiQA-2018 | 0.266 | 0.342 | 0.206 |
+
+These are the retrieval numbers feeding the Phase 1 RAG pipeline. Phase 2 will measure answer quality on top of these.
 
 ---
 
 ## Environment variables
 
-See `.env.example`. Phase 0 requires none — OpenSearch runs unauthenticated locally.
+See `.env.example`.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `OPENAI_API_KEY` | Yes (for `rag`) | — | OpenAI API key |
+| `SEARCHLAB_LLM_MODEL` | No | `gpt-4o-mini` | LLM model for answer generation |
+| `SEARCHLAB_LLM_JUDGE_MODEL` | No | `gpt-4o-mini` | LLM model used by RAGAS as judge (read by `searchlab-eval ragas`) |
+| `OPENSEARCH_URL` | No | `http://localhost:9200` | OpenSearch connection URL |
+| `SEARCHLAB_INDEX` | No | `searchlab-v0` | Default OpenSearch index name |
+| `SEARCHLAB_URL` | No | `http://localhost:8080` | `searchlab` service URL (used by `searchlab-eval`) |

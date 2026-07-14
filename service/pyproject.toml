@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "searchlab"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.29",
+    "pymupdf>=1.24",
+    "tiktoken>=0.7",
+    "opensearch-py>=2.4",
+    "openai>=1.30",
+    "click>=8.1",
+    "python-multipart>=0.0.9",
+    "requests>=2.28",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.1",
+    "pytest-asyncio>=0.23",
+]
+
+[project.scripts]
+searchlab = "searchlab.cli:cli"
+
+[tool.hatch.build.targets.wheel]
+packages = ["searchlab"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: requires running services or files (deselect with -m 'not integration')"]
