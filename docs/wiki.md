@@ -260,20 +260,26 @@ searchlab/
 **Responsibilities:**
 - Build and execute a BM25 `match` query against `chunk_text`
 - Map raw OpenSearch hits to typed `SearchHit` objects
+- Fetch real OpenSearch highlight fragments for one known `doc_id` + query (Compare tab's IR
+  doc-expansion, see §4.6 item 12)
 
 **Key symbols:**
 
 | Symbol | Role |
 |---|---|
 | `search(client, question, top_k, index)` | Returns `list[SearchHit]` ranked by score |
+| `highlight_document(client, query, doc_id, index)` | Returns matched `chunk_text` fragments for one `doc_id`; raises `FileNotFoundError` if the doc isn't in the live index |
 | `SearchHit` | `dataclass(rank, score, doc_id, source_filename, page_number, snippet)` |
+| `_chunk_text_match(text)` | Private helper — the one place a `chunk_text` match clause is built, shared by `search()` and `highlight_document()` so they can't drift into matching differently |
 
 **Query pattern:**
 ```json
 {"query": {"match": {"chunk_text": "<question>"}}, "size": <top_k>}
 ```
 
-**Common change areas:** Switching from BM25 to multi-field or semantic search — modify the query dict in `bm25_searcher.py:search()`.
+**Common change areas:** Switching from BM25 to multi-field or semantic search — modify
+`_chunk_text_match()` in `bm25_searcher.py` (both `search()` and `highlight_document()` pick up
+the change automatically).
 
 ---
 
@@ -312,13 +318,14 @@ searchlab/
 
 **Purpose:** Expose all pipelines over HTTP and serve the browser UI.
 
-**Modules:** `web/routes.py`, `web/html.py`
+**Modules:** `web/routes.py`, `web/html.py`, `web/compare.py`
 
 **Responsibilities:**
 - Define all FastAPI routes (form-based and JSON)
 - Serve the single-page HTML UI
 - Stream eval subprocess output via Server-Sent Events
 - Bridge between HTTP world and internal service functions
+- Merge two eval runs of the same type into per-query comparison rows (read-only)
 
 **Key symbols:**
 
@@ -327,8 +334,11 @@ searchlab/
 | `router` | `APIRouter` included in the app |
 | `render(openai_key_set)` | Renders HTML with API key warning flag |
 | `HTML_TEMPLATE` | Entire SPA as an embedded string |
+| `compare_ir(run_a, run_b)` | Merges two `ir_scores.json` runs by `query_id` |
+| `compare_rag(run_a, run_b)` | Merges two `rag_scores.json`/`rag_results.json` runs by list position |
+| `eval_highlight` route | Calls `highlight_document()` (`search/bm25_searcher.py`) for live IR match highlighting |
 
-**Common change areas:** Adding a new route — add a handler in `routes.py` and connect it to the UI in `html.py`.
+**Common change areas:** Adding a new route — add a handler in `routes.py` and connect it to the UI in `html.py`. Comparison merge logic lives entirely in `compare.py`, independent of the route/HTML layers.
 
 ---
 
@@ -547,6 +557,122 @@ sequenceDiagram
 6. Aggregate to mean per metric, write `rag_scores.json`.
 
 **External services:** SearchLab service (for RAG), OpenAI API (for RAGAS judge)
+
+---
+
+### 4.6 Per-Query Run Comparison
+
+**Business goal:** Trace a metric regression or improvement down to the individual query
+that caused it, instead of eyeballing two separate JSON files or Metrics-tab loads.
+
+**Trigger:** Compare tab in the UI (`#compare`), or `GET /api/eval/compare` directly.
+
+**Step-by-step flow:**
+
+1. User picks a type (IR or RAG), a dataset, and two runs of that dataset + type (Run A,
+   Run B) from dropdowns populated by the existing `/api/eval/runs` endpoint.
+2. `GET /api/eval/compare?type=&runA=&runB=` is called.
+3. The route validates the run ids (no path traversal), checks both run directories exist
+   (404 if not), then dispatches to `compare_ir` or `compare_rag`.
+4. **IR:** rows are keyed by `query_id` (the shared key of `ir_scores.json`'s `per_query`
+   dict). Queries present in only one run go to `only_in_a` / `only_in_b` instead of being
+   merged or defaulted to zero. If `raw_results.json` exists for a run, ranked sources are
+   attached per query for the expandable row content.
+5. **RAG:** rows are keyed by **list position** — `rag_scores.json`'s `per_query` is keyed
+   `"0"`, `"1"`, … with no query id of its own, so position is the only reliable join key.
+   Content (`question`/`answer`/`contexts`/`ground_truth`) comes from `rag_results.json` at
+   that same position. If Run A and Run B have different `--slice` sizes, only
+   `min(lenA, lenB)` positions are compared; the extra positions from the longer run appear
+   in `only_in_a`/`only_in_b`, not silently dropped.
+6. A mismatched dataset (`ir_scores.json`/`rag_scores.json`'s `dataset` field differs between
+   runs) raises a `ValueError`, surfaced as a 400 naming both datasets. A run missing the
+   requested type's score file (e.g. comparing an IR run against a RAG-only run) raises
+   `FileNotFoundError`, surfaced as a 400 naming the missing file.
+7. Every measure common to both runs gets `delta = b - a`. Positive (green) = Run B improved
+   over Run A; negative (red) = regression. Which run is "A" vs "B" is just dropdown order —
+   there is no forced baseline/chronological convention.
+8. A **Metric** dropdown next to the run pickers narrows the table to one measure's `A`/`B`/`Δ`
+   columns (default: "All metrics" shows every shared measure). This is a display-only filter —
+   it re-renders the same row data/order client-side and does not change the active sort key or
+   re-fetch `/api/eval/compare`.
+9. Every row shows the actual query text, not just an id. For IR, `compare_ir` loads
+   `searchlab-eval/data/<dataset>/queries.jsonl` once per request and attaches `query_text`
+   (`null`, with graceful fallback to `query_id`-only display, if the file is missing — this
+   never fails the comparison). For RAG, `query_text` is `content_a`'s `question`; if Run A's
+   and Run B's question differ at the same position (a sign the positional-join assumption
+   above doesn't hold), the row is flagged with `query_text_mismatch: true` and the UI shows
+   both questions instead of silently picking one.
+10. Clicking a `doc_id` inside an expanded IR row's source list calls
+    `GET /api/eval/document?dataset=&docId=`, which reads
+    `searchlab-eval/data/<dataset>/corpus.jsonl` and returns that document's `title`/`text`.
+    The result is inlined under the clicked entry (click again to collapse) and cached
+    client-side per `(dataset, doc_id)` for the session, so re-clicking the same doc doesn't
+    re-fetch. A missing dataset/doc_id returns a 404 with a human-readable message, shown
+    inline rather than blocking the row. This reads the static eval corpus the dataset shipped
+    with, not the live OpenSearch index — the two can diverge after a re-ingest.
+11. Every row (IR and RAG) has a **Judgement** link next to the query text, always visible in
+    the main table row — independent of the row's content-expansion accordion (multiple rows'
+    Judgement panels, and a row's Judgement panel plus its content expansion, can all be open
+    at once). For **IR**, clicking it calls `GET /api/eval/judgement?dataset=&queryId=`, which
+    reads `searchlab-eval/data/<dataset>/qrels/test.tsv` and returns that query's gold
+    `doc_id`/`score` pairs; results are cached client-side per `(dataset, query_id)` for the
+    session. A query with zero judged docs is a normal `200` with an empty list ("No judgements
+    recorded for this query"), not an error; a missing qrels file is a `404` shown inline. For
+    **RAG**, the panel renders the row's `ground_truth` field straight from the
+    `/api/eval/compare` response — no fetch. `compare_rag` sources it from `content_a`'s
+    `ground_truth` and flags `ground_truth_mismatch: true` if Run A's and Run B's
+    `ground_truth` differ at that position, so the panel shows both instead of silently picking
+    one. Because `ground_truth` now lives in the Judgement panel, the RAG row's own
+    content-expansion columns (item 4 above) show `answer`/`contexts` only — it is no longer
+    duplicated there.
+12. **IR only.** Expanding a `doc_id` (source list or Judgement panel qrels list — both share
+    one expansion handler) also fires `GET /api/eval/highlight?dataset=&docId=&query=`
+    alongside the existing document fetch, using the row's own `query_text`. This issues a
+    **live** OpenSearch query scoped to that one `doc_id` (`filter`/`term` on `_id`, so the doc
+    is returned regardless of match) with a `should` + `minimum_should_match: 0` `match` clause
+    on `chunk_text` and a `highlight` block on the same field — the same `chunk_text` field and
+    `match` clause construction the live Query tab searches (`_chunk_text_match()` in
+    `bm25_searcher.py` is shared by both, so the two can't drift into scoring differently).
+    Matched fragments render above the plain title/text, escaped and with OpenSearch's `<em>`
+    markers restored (never raw `innerHTML` of unescaped document content — fragments come from
+    live index content, not something this feature controls). A doc no longer present in the
+    live index is a `404`; a doc present but with no term overlap is a normal `200` with an
+    empty fragment list, shown as "No live-index match for this query" rather than a blank
+    section or an error. This reflects the index's *current* state, which can differ from what
+    the run was originally scored against if it was re-ingested since — same caveat class as the
+    plain document fetch (item 10). RAG rows have no per-document search step to attach a
+    highlight clause to, so no highlight request is ever made for them.
+13. **IR only.** The row's Judgement (qrels) data and its retrieved source list are
+    cross-referenced client-side, with no new endpoint — both sides already have the data they
+    need (`sources_a`/`sources_b` arrive in the initial `/api/eval/compare` response; qrels come
+    from the existing `GET /api/eval/judgement` cache). Expanding a row's source list marks each
+    `doc_id` also present in that query's qrels, distinguishing a qrels score `> 0` ("Judged
+    relevant") from a score of exactly `0` ("Judged non-relevant") — badges reuse the existing
+    delta color convention (`delta-pos` green / `metric-lo` grey) rather than a new color
+    language, and this is computed independently for Run A's and Run B's source lists. The
+    Judgement panel marks each qrels `doc_id` also present in `sources_a`/`sources_b` with which
+    run(s) retrieved it and at what rank (e.g. "Retrieved: A #3, B #7"). Because qrels are only
+    fetched on demand, expanding a row's source list (`toggleCompareRow`) also triggers the same
+    background qrels fetch the Judgement panel uses (factored into one shared
+    `ensureJudgementLoaded(row)` helper) so marking doesn't depend on the user opening the
+    Judgement panel first — the source list renders unmarked while the fetch is in flight, then
+    re-renders once it resolves. No marks (not "not judged" text) when qrels haven't resolved yet
+    or there's no match — additive only, same as the highlight/document-fetch degrade-gracefully
+    convention. RAG rows have neither qrels nor a per-document retrieved list, so no
+    cross-reference marking applies to them.
+
+**Classes/functions involved:** `compare_ir`, `compare_rag`, `load_ir_scores`,
+`load_rag_scores`, `load_rag_results`, `load_raw_results`, `load_document`, `load_qrels`,
+`_load_queries` (all in `web/compare.py`); `highlight_document` (in `search/bm25_searcher.py`);
+`ensureJudgementLoaded`, `sourceRank`, `retrievedMark`, `judgedMark` (client-side cross-reference
+helpers in `web/html.py`, item 13 — no backend counterpart)
+
+**External services:** mostly none — reads only the JSON files `searchlab-eval` already wrote
+under `searchlab-eval/results/<run_id>/`, plus the static `queries.jsonl`/`corpus.jsonl`/
+`qrels/test.tsv` under `searchlab-eval/data/<dataset>/`. Nothing new is written to disk. The one
+exception is item 12: expanding an IR `doc_id` issues a live, read-only OpenSearch query for
+highlighting, same as the Query tab's live searches. Item 13 adds no new network calls beyond the
+existing document/qrels fetches.
 
 ---
 
@@ -840,6 +966,170 @@ data: Queried 100/323 queries...
 event: done
 data: 0
 ```
+
+---
+
+### `GET /api/eval/compare`
+
+**Purpose:** Merge two eval runs of the same type + dataset into per-query comparison rows.
+
+**Request:**
+```
+GET /api/eval/compare?type=ir&runA=nfcorpus-20260619T200023Z&runB=nfcorpus-20260623T002234Z
+```
+
+`type` is `ir` or `rag`. `runA`/`runB` are run ids (directory names under
+`searchlab-eval/results/`).
+
+**Service called:** `compare_ir()` / `compare_rag()` in `web/compare.py`
+
+**Response (success, IR):**
+```json
+{
+  "run_a": "nfcorpus-20260619T200023Z",
+  "run_b": "nfcorpus-20260623T002234Z",
+  "dataset": "nfcorpus",
+  "measures": ["ndcg_cut_10", "recall_10", "..."],
+  "rows": [
+    {
+      "query_id": "PLAIN-2",
+      "query_text": "Do Cholesterol Statin Drugs Cause Breast Cancer?",
+      "a": {"ndcg_cut_10": 0.796, "...": "..."},
+      "b": {"ndcg_cut_10": 0.796, "...": "..."},
+      "delta": {"ndcg_cut_10": 0.0, "...": "..."},
+      "sources_a": [{"doc_id": "MED-14", "score": 20.7, "rank": 1}],
+      "sources_b": [{"doc_id": "MED-14", "score": 20.7, "rank": 1}]
+    }
+  ],
+  "only_in_a": [],
+  "only_in_b": []
+}
+```
+
+`query_text` is looked up from `searchlab-eval/data/<dataset>/queries.jsonl` and is `null` if
+that file is missing (the comparison still succeeds).
+
+**Response (success, RAG):** same shape, but rows are keyed by list position (`index`) with
+`content_a` / `content_b` (`question`/`answer`/`contexts`/`ground_truth`) instead of
+`sources_a` / `sources_b`. `query_text` is `content_a`'s `question`; if it differs from
+`content_b`'s `question` at the same position, the row also carries `query_text_mismatch: true`.
+Each row also carries a top-level `ground_truth` (from `content_a`'s `ground_truth`) and
+`ground_truth_mismatch: true` if Run A's and Run B's `ground_truth` differ at that position —
+this is what the UI's Judgement panel renders, with no separate fetch.
+
+**Response (error):**
+```json
+{"error": "Dataset mismatch: 'nfcorpus-...' is dataset 'nfcorpus', 'fiqa-...' is dataset 'fiqa'"}
+```
+- `400` — invalid `type`, invalid run id, dataset mismatch, or a run missing the requested
+  type's score file.
+
+---
+
+### `GET /api/eval/document`
+
+**Purpose:** Fetch a single document's `title`/`text` from a dataset's static BEIR corpus, for
+inline display when a `doc_id` is clicked in an expanded IR comparison row.
+
+**Request:**
+```
+GET /api/eval/document?dataset=nfcorpus&docId=MED-14
+```
+
+**Service called:** `load_document()` in `web/compare.py`, which scans
+`searchlab-eval/data/<dataset>/corpus.jsonl` for a matching `_id`.
+
+**Response (success):**
+```json
+{"doc_id": "MED-14", "title": "Statin use after diagnosis of breast cancer...", "text": "BACKGROUND: ..."}
+```
+
+**Response (error):**
+```json
+{"error": "Document 'MED-999' not found in dataset 'nfcorpus'"}
+```
+- `400` — invalid `dataset`/`docId` (path traversal characters).
+- `404` — dataset directory/`corpus.jsonl` missing, or no line matches `docId`.
+
+This reads the static corpus the dataset shipped with, not the live OpenSearch index — content
+can diverge after a re-ingest.
+- `404` — a run directory doesn't exist at all.
+
+---
+
+### `GET /api/eval/judgement`
+
+**Purpose:** Fetch the gold relevance judgements (qrels) for one IR query, for the Judgement
+panel on an IR comparison row.
+
+**Request:**
+```
+GET /api/eval/judgement?dataset=nfcorpus&queryId=PLAIN-2
+```
+
+**Service called:** `load_qrels()` in `web/compare.py`, which scans
+`searchlab-eval/data/<dataset>/qrels/test.tsv` for rows matching `queryId`.
+
+**Response (success):**
+```json
+{"query_id": "PLAIN-2", "judgements": [{"doc_id": "MED-14", "score": 2}, {"doc_id": "MED-2427", "score": 2}]}
+```
+
+A `query_id` with no matching rows is a normal data state, not an error — `200` with
+`"judgements": []`; the UI shows "No judgements recorded for this query."
+
+**Response (error):**
+```json
+{"error": "Dataset 'nfcorpus' has no qrels/test.tsv"}
+```
+- `400` — invalid `dataset`/`queryId` (path traversal characters).
+- `404` — dataset directory or `qrels/test.tsv` is missing.
+
+The RAG side of the Judgement panel needs no endpoint — it renders `ground_truth` /
+`ground_truth_mismatch` already present on the `/api/eval/compare` row.
+
+---
+
+### `GET /api/eval/highlight`
+
+**Purpose:** IR only. Real OpenSearch match highlighting for one `doc_id` + query, fetched
+automatically alongside `/api/eval/document` when a `doc_id` is expanded (source list or
+Judgement panel) — not a separate click.
+
+**Request:**
+```
+GET /api/eval/highlight?dataset=nfcorpus&docId=MED-14&query=Do%20Cholesterol%20Statin%20Drugs%20Cause%20Breast%20Cancer%3F
+```
+
+**Service called:** `highlight_document()` in `search/bm25_searcher.py`. Resolves the dataset's
+live index via the same `_resolve_index()` used by `/api/query` and `/rag`, then issues a
+`bool` query: `filter`/`term` on `_id` (returns the doc, non-scoring, if it's in the index at
+all) plus `should` + `minimum_should_match: 0` on a `match` clause over `chunk_text` (only
+contributes scoring/highlighting, never excludes the hit) and a `highlight` block on the same
+field. The `match` clause itself (`_chunk_text_match()`) is shared with `search()`, so live
+Query-tab searches and this highlight can't quietly diverge in how they match `chunk_text`.
+
+**Response (success):**
+```json
+{"doc_id": "MED-14", "fragments": ["<em>Statin</em> use after diagnosis of <em>breast</em> <em>cancer</em>..."]}
+```
+An empty `fragments` list is a normal `200` (doc exists in the live index, but nothing matched
+the query) — the UI shows "No live-index match for this query."
+
+**Response (error):**
+```json
+{"error": "Document 'MED-999' not found in live index 'searchlab-nfcorpus'"}
+```
+- `400` — invalid `dataset`/`docId` (path traversal characters), or empty `query`.
+- `404` — the `doc_id` has zero hits in the live index (structurally absent, not "no match").
+- Other OpenSearch client errors (connection, mapping) are caught broadly and returned as a
+  `200` `{"error": ...}` payload, same convention as `/api/query` — a live cluster call failing
+  for reasons unrelated to the doc/dataset must not surface as a stack trace either.
+
+This queries the **live** index at click time — it explains current matching, not what was true
+when the run was originally scored; same divergence risk as `/api/eval/document` above if the
+index was re-ingested since. RAG rows never call this endpoint: `question`/`answer`/`contexts`
+are already fully-formed inline text, not the result of a per-document OpenSearch query.
 
 ---
 

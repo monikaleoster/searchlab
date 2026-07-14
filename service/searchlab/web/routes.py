@@ -11,8 +11,9 @@ from ..ingest.chunker import chunk
 from ..ingest.indexer import index_chunks, index_corpus_docs
 from ..opensearch.client import create_client
 from ..opensearch.index_bootstrap import ensure_index_exists
-from ..search.bm25_searcher import search as bm25_search
+from ..search.bm25_searcher import highlight_document, search as bm25_search
 from ..rag import run_rag
+from .compare import compare_ir, compare_rag, load_document, load_qrels
 from .html import render as render_html
 
 router = APIRouter()
@@ -246,6 +247,13 @@ async def eval_runs():
                 entry["computedAt"] = meta.get("computed_at", "")
             except Exception:
                 pass
+        elif has_rag:
+            try:
+                meta = json.loads(rag_path.read_text())
+                entry["dataset"] = meta.get("dataset", "")
+                entry["computedAt"] = meta.get("computed_at", "")
+            except Exception:
+                pass
         runs.append(entry)
     return runs
 
@@ -270,3 +278,78 @@ async def eval_rag_results(runId: str = Query("")):
     if not path.exists():
         return JSONResponse({"error": f"RAG scores not found: {runId}"}, status_code=404)
     return JSONResponse(json.loads(path.read_text()))
+
+
+# ── Eval Compare ─────────────────────────────────────────────────────
+
+@router.get("/api/eval/compare")
+async def eval_compare(
+    type: str = Query(...),
+    runA: str = Query(...),
+    runB: str = Query(...),
+):
+    if type not in {"ir", "rag"}:
+        return JSONResponse({"error": f"Invalid type: '{type}'. Must be 'ir' or 'rag'."}, status_code=400)
+    for run_id in (runA, runB):
+        if not run_id or ".." in run_id or "/" in run_id:
+            return JSONResponse({"error": f"Invalid run id: '{run_id}'"}, status_code=400)
+    for run_id in (runA, runB):
+        if not (_RESULTS_DIR / run_id).is_dir():
+            return JSONResponse({"error": f"Run not found: {run_id}"}, status_code=404)
+
+    try:
+        result = compare_ir(runA, runB) if type == "ir" else compare_rag(runA, runB)
+    except FileNotFoundError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    return JSONResponse(result)
+
+
+@router.get("/api/eval/document")
+async def eval_document(dataset: str = Query(""), docId: str = Query("")):
+    for value in (dataset, docId):
+        if not value or ".." in value or "/" in value:
+            return JSONResponse({"error": f"Invalid parameter: '{value}'"}, status_code=400)
+    try:
+        doc = load_document(dataset, docId)
+    except FileNotFoundError as e:
+        return JSONResponse({"error": str(e)}, status_code=404)
+    return JSONResponse(doc)
+
+
+@router.get("/api/eval/judgement")
+async def eval_judgement(dataset: str = Query(""), queryId: str = Query("")):
+    for value in (dataset, queryId):
+        if not value or ".." in value or "/" in value:
+            return JSONResponse({"error": f"Invalid parameter: '{value}'"}, status_code=400)
+    try:
+        judgements = load_qrels(dataset, queryId)
+    except FileNotFoundError as e:
+        return JSONResponse({"error": str(e)}, status_code=404)
+    return JSONResponse({"query_id": queryId, "judgements": judgements})
+
+
+@router.get("/api/eval/highlight")
+async def eval_highlight(
+    dataset: str = Query(""),
+    docId: str = Query(""),
+    query: str = Query(""),
+):
+    for value in (dataset, docId):
+        if not value or ".." in value or "/" in value:
+            return JSONResponse({"error": f"Invalid parameter: '{value}'"}, status_code=400)
+    if not query.strip():
+        return JSONResponse({"error": "query is required"}, status_code=400)
+    index = _resolve_index(dataset)
+    try:
+        client = create_client()
+        fragments = highlight_document(client, query, docId, index)
+    except FileNotFoundError as e:
+        return JSONResponse({"error": str(e)}, status_code=404)
+    except Exception as e:
+        # A live cluster call can fail for reasons unrelated to the doc/dataset
+        # (connection errors, mapping errors) — same broad-catch convention /api/query
+        # already uses, so those surface as a normal 200 error payload, not a stack trace.
+        return {"error": str(e)}
+    return {"doc_id": docId, "fragments": fragments}

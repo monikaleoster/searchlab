@@ -108,6 +108,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     .filter-row { display: flex; gap: .5rem; align-items: center; margin-bottom: .5rem; }
     .filter-row input { flex: 1; }
 
+    /* ── Compare tab ── */
+    th.group-th { text-align: center; border-left: 1px solid #e6e6e6; }
+    tbody tr.cmp-row { cursor: pointer; }
+    tr.cmp-expand-row td { background: #f8f9fb; padding: 1rem 1.25rem; border-top: none; }
+    .cmp-content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    .cmp-content-col h4 { font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #999; margin-bottom: .35rem; }
+    .cmp-question { font-size: .85rem; margin-bottom: .9rem; padding: .5rem .75rem; background: #eef2ff; border-radius: 6px; }
+    .only-section-title { font-size: .75rem; font-weight: 700; color: #888; margin: .25rem 0 .4rem; }
+    .cmp-judgement-link { color: #4f7cff; text-decoration: none; }
+    .cmp-judgement-link:hover { text-decoration: underline; }
+    tr.cmp-judgement-row td { background: #f5f7ff; padding: .75rem 1.25rem; border-top: none; }
+    .cmp-judgement-panel h4 { font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #999; margin-bottom: .35rem; }
+    @media (max-width: 700px) { .cmp-content-grid { grid-template-columns: 1fr; } }
+
     /* ── Responsive ── */
     @media (max-width: 600px) {
       nav.tabs { padding: 0 .5rem; overflow-x: auto; }
@@ -128,6 +142,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <button                data-tab="ingest"  onclick="switchTab('ingest')">Ingest</button>
   <button                data-tab="eval"    onclick="switchTab('eval')">Eval</button>
   <button                data-tab="metrics" onclick="switchTab('metrics')">Metrics</button>
+  <button                data-tab="compare" onclick="switchTab('compare')">Compare</button>
 </nav>
 
 <div class="main">
@@ -324,6 +339,58 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   </div>
 </div>
 
+<!-- ════════════════════════════════════════════ COMPARE ══ -->
+<div id="tab-compare" class="panel hidden">
+  <div class="card">
+    <div class="card-title">Compare Runs</div>
+    <div class="metrics-control-row">
+      <div class="field-sm" style="flex:0 0 90px">
+        <label for="cmp-type">Type</label>
+        <select id="cmp-type" onchange="onCompareTypeChange()">
+          <option value="ir">IR</option>
+          <option value="rag">RAG</option>
+        </select>
+      </div>
+      <div class="field-sm" style="flex:0 0 130px">
+        <label for="cmp-dataset">Dataset</label>
+        <select id="cmp-dataset" onchange="refreshCompareRunDropdowns()">
+          <option value="">&mdash; select &mdash;</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="cmp-run-a">Run A</label>
+        <select id="cmp-run-a"><option value="">&mdash; select &mdash;</option></select>
+      </div>
+      <div class="field">
+        <label for="cmp-run-b">Run B</label>
+        <select id="cmp-run-b"><option value="">&mdash; select &mdash;</option></select>
+      </div>
+      <button class="btn" onclick="runCompare()">Compare</button>
+      <div class="field-sm" style="flex:0 0 150px">
+        <label for="cmp-metric-filter">Metric</label>
+        <select id="cmp-metric-filter" onchange="onCompareMetricFilterChange()" disabled>
+          <option value="">All metrics</option>
+        </select>
+      </div>
+    </div>
+    <div id="cmp-status" style="margin-top:.5rem"></div>
+  </div>
+
+  <div id="cmp-content" style="display:none">
+    <div class="card">
+      <div class="card-title" id="cmp-title">Comparison</div>
+      <table id="cmp-table">
+        <thead id="cmp-thead"></thead>
+        <tbody id="cmp-tbody"></tbody>
+      </table>
+    </div>
+    <div class="card" id="cmp-only-card" style="display:none">
+      <div class="card-title">Coverage Mismatch</div>
+      <div id="cmp-only-content"></div>
+    </div>
+  </div>
+</div>
+
 </div><!-- .main -->
 
 <script>
@@ -352,6 +419,25 @@ const RAG_METRICS_KEYS = [
   { key: 'context_recall',    label: 'Context Recall'    },
   { key: 'context_precision', label: 'Context Precision' },
 ];
+
+const ALL_METRIC_LABELS = {};
+METRICS_KEYS.forEach(m => ALL_METRIC_LABELS[m.key] = m.label);
+RAG_METRICS_KEYS.forEach(m => ALL_METRIC_LABELS[m.key] = m.label);
+function metricLabel(key) { return ALL_METRIC_LABELS[key] || key; }
+
+const PRIMARY_MEASURE = { ir: 'ndcg_cut_10', rag: 'faithfulness' };
+
+let cmpData         = null;
+let cmpType         = 'ir';
+let cmpSortKey      = { measure: 'ndcg_cut_10', part: 'delta' };
+let cmpSortAsc      = true;
+let cmpExpandedKey  = null;
+let cmpMetricFilter = '';
+let cmpExpandedDocs = new Set();
+const cmpDocCache   = new Map();
+const cmpHighlightCache = new Map();
+let cmpOpenJudgements = new Set();
+const cmpJudgementCache = new Map();
 
 // ── Tab switching ────────────────────────────────────────────────────
 function switchTab(name) {
@@ -589,6 +675,7 @@ async function loadEvalRuns() {
     renderEvalRuns(allRuns);
     refreshRunDropdown('m-run',  'm-dataset');
     refreshRunDropdown('m-run2', 'm-dataset2');
+    refreshCompareDatasetDropdown();
   } catch(e) {
     document.getElementById('eval-runs-content').innerHTML =
       `<div class="alert alert-error">Could not load runs: ${esc(e.message)}</div>`;
@@ -812,6 +899,498 @@ function renderRagMetrics(data) {
       }).join('');
     return `<tr><td><code>${esc(qid)}</code></td>${cells}</tr>`;
   }).join('');
+}
+
+// ── Compare ──────────────────────────────────────────────────────────
+function onCompareTypeChange() {
+  cmpType = document.getElementById('cmp-type').value;
+  cmpSortKey = { measure: PRIMARY_MEASURE[cmpType], part: 'delta' };
+  cmpSortAsc = true;
+  cmpData = null;
+  cmpExpandedDocs = new Set();
+  cmpOpenJudgements = new Set();
+  document.getElementById('cmp-content').style.display = 'none';
+  document.getElementById('cmp-status').innerHTML = '';
+  resetCompareMetricFilter();
+  refreshCompareDatasetDropdown();
+}
+
+function resetCompareMetricFilter() {
+  cmpMetricFilter = '';
+  const sel = document.getElementById('cmp-metric-filter');
+  sel.innerHTML = '<option value="">All metrics</option>';
+  sel.value = '';
+  sel.disabled = true;
+}
+
+function onCompareMetricFilterChange() {
+  cmpMetricFilter = document.getElementById('cmp-metric-filter').value;
+  renderCompareTable(cmpData);
+  renderCompareOnly(cmpData);
+}
+
+function refreshCompareDatasetDropdown() {
+  const flagKey = cmpType === 'ir' ? 'hasMetrics' : 'hasRagMetrics';
+  const datasets = [...new Set(allRuns.filter(r => r[flagKey] && r.dataset).map(r => r.dataset))].sort();
+  const sel = document.getElementById('cmp-dataset');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">&mdash; select &mdash;</option>' +
+    datasets.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+  if (datasets.includes(prev)) sel.value = prev;
+  refreshCompareRunDropdowns();
+}
+
+function refreshCompareRunDropdowns() {
+  const flagKey = cmpType === 'ir' ? 'hasMetrics' : 'hasRagMetrics';
+  const dataset = document.getElementById('cmp-dataset').value;
+  const candidates = allRuns
+    .filter(r => r[flagKey] && (!dataset || r.dataset === dataset))
+    .sort((a, b) => (b.computedAt || '').localeCompare(a.computedAt || ''));
+  ['cmp-run-a', 'cmp-run-b'].forEach(id => {
+    const sel = document.getElementById(id);
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">&mdash; select &mdash;</option>' +
+      candidates.map(r => `<option value="${esc(r.runId)}">${esc(r.runId)}${r.computedAt ? '  (' + esc(r.computedAt.slice(0,10)) + ')' : ''}</option>`).join('');
+    if (candidates.some(r => r.runId === prev)) sel.value = prev;
+  });
+}
+
+async function runCompare() {
+  const type = cmpType;
+  const runA = document.getElementById('cmp-run-a').value;
+  const runB = document.getElementById('cmp-run-b').value;
+  const statusEl = document.getElementById('cmp-status');
+  statusEl.innerHTML = '';
+  if (!runA || !runB) { statusEl.innerHTML = '<div class="alert alert-error">Please select both Run A and Run B.</div>'; return; }
+  if (runA === runB) { statusEl.innerHTML = '<div class="alert alert-error">Run A and Run B must be different.</div>'; return; }
+  document.getElementById('cmp-content').style.display = 'none';
+  try {
+    const r = await fetch(`/api/eval/compare?type=${enc(type)}&runA=${enc(runA)}&runB=${enc(runB)}`);
+    const data = await r.json();
+    if (data.error) { statusEl.innerHTML = `<div class="alert alert-error">${esc(data.error)}</div>`; return; }
+    cmpData = data;
+    cmpSortKey = { measure: PRIMARY_MEASURE[type], part: 'delta' };
+    cmpSortAsc = true;
+    cmpExpandedKey = null;
+    cmpExpandedDocs = new Set();
+    cmpOpenJudgements = new Set();
+    cmpMetricFilter = '';
+    const filterSel = document.getElementById('cmp-metric-filter');
+    filterSel.innerHTML = '<option value="">All metrics</option>' +
+      data.measures.map(m => `<option value="${esc(m)}">${esc(metricLabel(m))}</option>`).join('');
+    filterSel.value = '';
+    filterSel.disabled = false;
+    renderCompare();
+  } catch(e) {
+    statusEl.innerHTML = `<div class="alert alert-error">Network error: ${esc(e.message)}</div>`;
+  }
+}
+
+function renderCompare() {
+  const data = cmpData;
+  document.getElementById('cmp-content').style.display = 'block';
+  document.getElementById('cmp-title').textContent = `${data.run_a} vs ${data.run_b} — ${data.dataset}`;
+  renderCompareTable(data);
+  renderCompareOnly(data);
+}
+
+function rowKey(row) { return cmpType === 'ir' ? row.query_id : row.index; }
+
+function deltaCls(d) {
+  if (d == null || Math.abs(d) < 0.01) return 'metric-lo';
+  return d > 0 ? 'delta-pos' : 'delta-neg';
+}
+
+function sortCompare(measure, part) {
+  if (cmpSortKey.measure === measure && cmpSortKey.part === part) cmpSortAsc = !cmpSortAsc;
+  else { cmpSortKey = { measure, part }; cmpSortAsc = true; }
+  renderCompareTable(cmpData);
+}
+
+function toggleCompareRow(key) {
+  const wasExpanded = String(cmpExpandedKey) === String(key);
+  cmpExpandedKey = wasExpanded ? null : key;
+  renderCompareTable(cmpData);
+  // Expanding an IR row's source list needs qrels to mark judged doc_ids (Amendment 5) —
+  // fetch in the background so marking works even if the Judgement panel is never opened.
+  if (!wasExpanded && cmpType === 'ir') {
+    const row = cmpData.rows.find(r => String(rowKey(r)) === String(key));
+    if (row) ensureJudgementLoaded(row);
+  }
+}
+
+function judgementLink(key) {
+  return `<a href="#" class="cmp-judgement-link" style="font-size:.68rem;margin-left:.4rem;white-space:nowrap"
+    onclick="event.stopPropagation();toggleJudgement('${esc(String(key))}');return false">Judgement</a>`;
+}
+
+function renderQueryCell(row) {
+  const key = rowKey(row);
+  if (cmpType === 'ir') {
+    const qid = `<code>${esc(row.query_id ?? '')}</code>${judgementLink(key)}`;
+    const text = row.query_text
+      ? `<div style="font-size:.72rem;color:#666;margin-top:.15rem">${esc(row.query_text)}</div>`
+      : '';
+    return qid + text;
+  }
+  const text = row.query_text
+    ? `<div style="font-size:.82rem">${esc(row.query_text)}${judgementLink(key)}</div>`
+    : `<div style="font-size:.82rem;color:#bbb">(no question)${judgementLink(key)}</div>`;
+  const mismatch = row.query_text_mismatch
+    ? `<div class="alert alert-warn" style="margin-top:.25rem;padding:.2rem .5rem;font-size:.68rem">` +
+      `Question differs between runs — showing Run A&rsquo;s.<br>A: "${esc(row.content_a?.question ?? '')}"<br>B: "${esc(row.content_b?.question ?? '')}"</div>`
+    : '';
+  return text + mismatch;
+}
+
+function renderCompareTable(data) {
+  const measures = cmpMetricFilter ? [cmpMetricFilter] : data.measures;
+  const rows = [...data.rows];
+  const colCount = 1 + measures.length * 3;
+
+  rows.sort((r1, r2) => {
+    const pick = row => cmpSortKey.part === 'delta' ? row.delta[cmpSortKey.measure] : row[cmpSortKey.part][cmpSortKey.measure];
+    const v1 = pick(r1), v2 = pick(r2);
+    const a = v1 == null ? -Infinity : v1;
+    const b = v2 == null ? -Infinity : v2;
+    return cmpSortAsc ? a - b : b - a;
+  });
+
+  const groupHeader = `<th rowspan="2">Query</th>` +
+    measures.map(m => `<th colspan="3" class="group-th">${esc(metricLabel(m))}</th>`).join('');
+  const subHeader = measures.map(m => {
+    const sortTh = (part, label) => {
+      const active = cmpSortKey.measure === m && cmpSortKey.part === part;
+      const arrow = active ? (cmpSortAsc ? ' ▲' : ' ▼') : '';
+      return `<th class="sortable" onclick="sortCompare('${m}','${part}')">${label}${arrow}</th>`;
+    };
+    return sortTh('a', 'A') + sortTh('b', 'B') + sortTh('delta', 'Δ');
+  }).join('');
+  document.getElementById('cmp-thead').innerHTML = `<tr>${groupHeader}</tr><tr>${subHeader}</tr>`;
+
+  const tbody = document.getElementById('cmp-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align:center;color:#aaa;padding:1.5rem">No overlapping queries between these two runs.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(row => {
+    const key = rowKey(row);
+    const cells = measures.map(m => {
+      const va = row.a[m], vb = row.b[m], d = row.delta[m];
+      return `<td class="${va != null ? metricCls(va) : 'metric-lo'}">${fmt(va)}</td>` +
+             `<td class="${vb != null ? metricCls(vb) : 'metric-lo'}">${fmt(vb)}</td>` +
+             `<td class="${deltaCls(d)}">${d != null ? (d >= 0 ? '+' : '') + d.toFixed(3) : '-'}</td>`;
+    }).join('');
+    const mainRow = `<tr class="cmp-row" onclick="toggleCompareRow('${esc(String(key))}')">
+      <td>${renderQueryCell(row)}</td>${cells}
+    </tr>`;
+    const judgementRow = cmpOpenJudgements.has(String(key))
+      ? `<tr class="cmp-judgement-row"><td colspan="${colCount}">${renderJudgementPanel(row, key)}</td></tr>`
+      : '';
+    const expanded = String(cmpExpandedKey) === String(key)
+      ? `<tr class="cmp-expand-row"><td colspan="${colCount}">${renderCompareRowContent(row)}</td></tr>`
+      : '';
+    return mainRow + judgementRow + expanded;
+  }).join('');
+}
+
+async function toggleJudgement(keyStr) {
+  if (cmpOpenJudgements.has(keyStr)) {
+    cmpOpenJudgements.delete(keyStr);
+    renderCompareTable(cmpData);
+    return;
+  }
+  cmpOpenJudgements.add(keyStr);
+  renderCompareTable(cmpData);
+  const row = cmpData.rows.find(r => String(rowKey(r)) === keyStr);
+  if (row) await ensureJudgementLoaded(row);
+}
+
+// Shared by toggleJudgement (Judgement panel open) and toggleCompareRow (source-list
+// expansion, Amendment 5) so there is one fetch/cache implementation, not two.
+async function ensureJudgementLoaded(row) {
+  if (cmpType !== 'ir') return; // RAG needs no fetch — renders from cmpData directly
+  const dataset = cmpData.dataset;
+  const queryId = row.query_id;
+  const cacheKey = `${dataset}::${queryId}`;
+  if (cmpJudgementCache.has(cacheKey)) return;
+  cmpJudgementCache.set(cacheKey, { status: 'loading' });
+  renderCompareTable(cmpData);
+  try {
+    const r = await fetch(`/api/eval/judgement?dataset=${enc(dataset)}&queryId=${enc(queryId)}`);
+    const data = await r.json();
+    if (!r.ok) {
+      cmpJudgementCache.set(cacheKey, { status: 'error', message: data.error || 'Judgements unavailable for this dataset' });
+    } else {
+      cmpJudgementCache.set(cacheKey, { status: 'ok', judgements: data.judgements || [] });
+    }
+  } catch (e) {
+    cmpJudgementCache.set(cacheKey, { status: 'error', message: `Network error: ${e.message}` });
+  }
+  renderCompareTable(cmpData);
+}
+
+function renderJudgementPanel(row, key) {
+  if (cmpType === 'rag') {
+    if (row.ground_truth_mismatch) {
+      return `<div class="cmp-judgement-panel">
+        <h4>Judgement (Ground Truth)</h4>
+        <div class="alert alert-warn" style="padding:.35rem .6rem;font-size:.76rem">
+          Ground truth differs between runs at this position.
+          <div style="margin-top:.3rem"><strong>Run A:</strong> ${esc(row.content_a?.ground_truth ?? '(none)')}</div>
+          <div style="margin-top:.2rem"><strong>Run B:</strong> ${esc(row.content_b?.ground_truth ?? '(none)')}</div>
+        </div>
+      </div>`;
+    }
+    return `<div class="cmp-judgement-panel">
+      <h4>Judgement (Ground Truth)</h4>
+      <div style="font-size:.8rem;color:#333">${esc(row.ground_truth ?? '(none)')}</div>
+    </div>`;
+  }
+
+  const dataset = cmpData.dataset;
+  const cacheKey = `${dataset}::${row.query_id}`;
+  const cached = cmpJudgementCache.get(cacheKey);
+  if (!cached || cached.status === 'loading') {
+    return `<div class="cmp-judgement-panel"><h4>Judgement (Qrels)</h4><div style="font-size:.78rem;color:#999">Loading&hellip;</div></div>`;
+  }
+  if (cached.status === 'error') {
+    return `<div class="cmp-judgement-panel"><h4>Judgement (Qrels)</h4><div style="font-size:.78rem;color:#c0392b">${esc(cached.message)}</div></div>`;
+  }
+  if (!cached.judgements.length) {
+    return `<div class="cmp-judgement-panel"><h4>Judgement (Qrels)</h4><div style="font-size:.78rem;color:#999">No judgements recorded for this query.</div></div>`;
+  }
+  const rowKeyStr = String(key);
+  const rowsHtml = cached.judgements.map((j, idx) => {
+    const docKeyStr = docKey(rowKeyStr, 'j', idx, j.doc_id);
+    let detail = '';
+    if (cmpExpandedDocs.has(docKeyStr)) {
+      const docCached = cmpDocCache.get(`${dataset}::${j.doc_id}`);
+      if (!docCached || docCached.status === 'loading') {
+        detail = `<tr><td colspan="2" style="padding:.4rem .75rem;color:#999;font-size:.75rem">Loading&hellip;</td></tr>`;
+      } else if (docCached.status === 'error') {
+        detail = `<tr><td colspan="2" style="padding:.4rem .75rem;color:#c0392b;font-size:.75rem">${esc(docCached.message)}</td></tr>`;
+      } else {
+        detail = `<tr><td colspan="2" style="padding:.5rem .75rem;background:#fff">
+          ${renderHighlightFragments(dataset, j.doc_id, row.query_text)}
+          <div style="font-weight:600;font-size:.78rem;margin-bottom:.2rem">${esc(docCached.title || '(untitled)')}</div>
+          <div style="font-size:.76rem;color:#555">${esc(docCached.text || '')}</div>
+        </td></tr>`;
+      }
+    }
+    const retrievedBadge = retrievedMark(row, j.doc_id);
+    return `<tr class="cmp-doc-row" style="cursor:pointer" onclick="toggleCompareDoc('${esc(rowKeyStr)}','j',${idx},'${esc(j.doc_id)}')">` +
+      `<td><code>${esc(j.doc_id)}</code>${retrievedBadge}</td><td>${esc(String(j.score))}</td></tr>${detail}`;
+  }).join('');
+  return `<div class="cmp-judgement-panel">
+    <h4>Judgement (Qrels)</h4>
+    <table style="font-size:.78rem"><thead><tr><th>Doc ID</th><th>Score</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+  </div>`;
+}
+
+function renderCompareRowContent(row) {
+  if (cmpType === 'rag') {
+    const ca = row.content_a || {};
+    const cb = row.content_b || {};
+    const contextsHtml = ctxs => (ctxs && ctxs.length)
+      ? ctxs.map((c, i) => `<div style="font-size:.78rem;color:#555;padding:.2rem 0">[${i+1}] ${esc(c)}</div>`).join('')
+      : '<div style="font-size:.78rem;color:#bbb">(no contexts)</div>';
+    const col = (label, content) => `<div class="cmp-content-col">
+      <h4>${label} &mdash; Answer</h4>
+      <div class="answer-text" style="font-size:.8rem">${esc(content.answer ?? '')}</div>
+      <h4 style="margin-top:.75rem">Contexts</h4>
+      ${contextsHtml(content.contexts)}
+    </div>`;
+    return `<div class="cmp-question"><strong>Q:</strong> ${esc(ca.question ?? cb.question ?? '')}</div>
+      <div class="cmp-content-grid">${col('Run A', ca)}${col('Run B', cb)}</div>`;
+  }
+
+  const rowKeyStr = String(rowKey(row));
+  return `<div class="cmp-content-grid">
+    <div class="cmp-content-col"><h4>Run A &mdash; Sources</h4>${renderSourceList(row.sources_a, rowKeyStr, 'a', row)}</div>
+    <div class="cmp-content-col"><h4>Run B &mdash; Sources</h4>${renderSourceList(row.sources_b, rowKeyStr, 'b', row)}</div>
+  </div>`;
+}
+
+function docKey(rowKeyStr, side, idx, docId) { return `${rowKeyStr}|${side}|${idx}|${docId}`; }
+
+// Amendment 5: doc_id -> rank in a source list, or null. Shared by the judged-mark lookup
+// (source list) and the retrieved-mark lookup (Judgement panel) so there's one find/indexOf.
+function sourceRank(sources, docId) {
+  if (!sources) return null;
+  const found = sources.find(s => s.doc_id === docId);
+  return found ? found.rank : null;
+}
+
+// Amendment 5: badge for a Judgement-panel doc_id showing which run(s) retrieved it and at
+// what rank, using sources_a/sources_b already on the row — no fetch needed.
+function retrievedMark(row, docId) {
+  const rankA = sourceRank(row.sources_a, docId);
+  const rankB = sourceRank(row.sources_b, docId);
+  if (rankA == null && rankB == null) return '';
+  const parts = [];
+  if (rankA != null) parts.push(`A #${rankA}`);
+  if (rankB != null) parts.push(`B #${rankB}`);
+  return `<span class="delta-pos" style="font-size:.68rem;margin-left:.4rem">Retrieved: ${parts.join(', ')}</span>`;
+}
+
+// Amendment 5: badge for a source-list doc_id showing whether it's judged relevant (qrels
+// score > 0) or explicitly judged non-relevant (score === 0). No badge if qrels haven't
+// resolved yet or the doc_id isn't judged — additive only, same rendering otherwise.
+function judgedMark(dataset, queryId, docId) {
+  const cached = cmpJudgementCache.get(`${dataset}::${queryId}`);
+  if (!cached || cached.status !== 'ok') return '';
+  const j = cached.judgements.find(j => j.doc_id === docId);
+  if (!j) return '';
+  return j.score > 0
+    ? `<span class="delta-pos" style="font-size:.68rem;margin-left:.4rem">Judged relevant</span>`
+    : `<span class="metric-lo" style="font-size:.68rem;margin-left:.4rem">Judged non-relevant</span>`;
+}
+
+function renderSourceList(sources, rowKeyStr, side, row) {
+  if (!sources || !sources.length) {
+    return '<div style="font-size:.78rem;color:#bbb">No source detail for this run</div>';
+  }
+  const queryText = row.query_text;
+  const rowsHtml = sources.map((s, idx) => {
+    const key = docKey(rowKeyStr, side, idx, s.doc_id);
+    const expanded = cmpExpandedDocs.has(key);
+    let detail = '';
+    if (expanded) {
+      const cacheKey = `${cmpData.dataset}::${s.doc_id}`;
+      const cached = cmpDocCache.get(cacheKey);
+      if (!cached || cached.status === 'loading') {
+        detail = `<tr><td colspan="3" style="padding:.4rem .75rem;color:#999;font-size:.75rem">Loading&hellip;</td></tr>`;
+      } else if (cached.status === 'error') {
+        detail = `<tr><td colspan="3" style="padding:.4rem .75rem;color:#c0392b;font-size:.75rem">${esc(cached.message)}</td></tr>`;
+      } else {
+        detail = `<tr><td colspan="3" style="padding:.5rem .75rem;background:#fff">
+          ${renderHighlightFragments(cmpData.dataset, s.doc_id, queryText)}
+          <div style="font-weight:600;font-size:.78rem;margin-bottom:.2rem">${esc(cached.title || '(untitled)')}</div>
+          <div style="font-size:.76rem;color:#555">${esc(cached.text || '')}</div>
+        </td></tr>`;
+      }
+    }
+    const judgedBadge = judgedMark(cmpData.dataset, row.query_id, s.doc_id);
+    return `<tr class="cmp-doc-row" style="cursor:pointer" onclick="toggleCompareDoc('${esc(rowKeyStr)}','${side}',${idx},'${esc(s.doc_id)}')">` +
+      `<td>${s.rank}</td><td><code>${esc(s.doc_id)}</code>${judgedBadge}</td><td>${s.score.toFixed(3)}</td></tr>${detail}`;
+  }).join('');
+  return `<table style="font-size:.78rem"><thead><tr><th>Rank</th><th>Doc ID</th><th>Score</th></tr></thead><tbody>${rowsHtml}</tbody></table>`;
+}
+
+async function toggleCompareDoc(rowKeyStr, side, idx, docId) {
+  const key = docKey(rowKeyStr, side, idx, docId);
+  if (cmpExpandedDocs.has(key)) {
+    cmpExpandedDocs.delete(key);
+    renderCompareTable(cmpData);
+    return;
+  }
+  cmpExpandedDocs.add(key);
+  renderCompareTable(cmpData);
+
+  const dataset = cmpData.dataset;
+  const fetches = [fetchCompareDocument(dataset, docId)];
+  // IR only: highlighting needs a query string to match against, and RAG rows
+  // have no per-document search step (see Amendment 4 — highlight is IR-only).
+  if (cmpType === 'ir') {
+    const row = cmpData.rows.find(r => String(rowKey(r)) === rowKeyStr);
+    if (row && row.query_text) {
+      fetches.push(fetchCompareHighlight(dataset, docId, row.query_text));
+    }
+  }
+  await Promise.all(fetches);
+}
+
+async function fetchCompareDocument(dataset, docId) {
+  const cacheKey = `${dataset}::${docId}`;
+  if (cmpDocCache.has(cacheKey)) return;
+  cmpDocCache.set(cacheKey, { status: 'loading' });
+  renderCompareTable(cmpData);
+  try {
+    const r = await fetch(`/api/eval/document?dataset=${enc(dataset)}&docId=${enc(docId)}`);
+    const data = await r.json();
+    if (!r.ok) {
+      cmpDocCache.set(cacheKey, { status: 'error', message: data.error || 'Document not found' });
+    } else {
+      cmpDocCache.set(cacheKey, { status: 'ok', title: data.title, text: data.text });
+    }
+  } catch (e) {
+    cmpDocCache.set(cacheKey, { status: 'error', message: `Network error: ${e.message}` });
+  }
+  renderCompareTable(cmpData);
+}
+
+async function fetchCompareHighlight(dataset, docId, queryText) {
+  const cacheKey = `${dataset}::${docId}::${queryText}`;
+  if (cmpHighlightCache.has(cacheKey)) return;
+  cmpHighlightCache.set(cacheKey, { status: 'loading' });
+  renderCompareTable(cmpData);
+  try {
+    const r = await fetch(`/api/eval/highlight?dataset=${enc(dataset)}&docId=${enc(docId)}&query=${enc(queryText)}`);
+    const data = await r.json();
+    if (!r.ok || data.error) {
+      cmpHighlightCache.set(cacheKey, { status: 'error', message: data.error || 'Highlight unavailable' });
+    } else {
+      cmpHighlightCache.set(cacheKey, { status: 'ok', fragments: data.fragments || [] });
+    }
+  } catch (e) {
+    cmpHighlightCache.set(cacheKey, { status: 'error', message: `Network error: ${e.message}` });
+  }
+  renderCompareTable(cmpData);
+}
+
+function renderHighlightFragments(dataset, docId, queryText) {
+  if (!queryText) return '';
+  const cacheKey = `${dataset}::${docId}::${queryText}`;
+  const cached = cmpHighlightCache.get(cacheKey);
+  if (!cached || cached.status === 'loading') {
+    return `<div style="font-size:.74rem;color:#999;margin-bottom:.35rem">Loading match highlight&hellip;</div>`;
+  }
+  if (cached.status === 'error') {
+    return `<div style="font-size:.74rem;color:#c0392b;margin-bottom:.35rem">${esc(cached.message)}</div>`;
+  }
+  if (!cached.fragments.length) {
+    return `<div style="font-size:.74rem;color:#999;margin-bottom:.35rem">No live-index match for this query.</div>`;
+  }
+  // Fragments are OpenSearch's copy of ingested document text, not something this
+  // feature controls — escape everything first, then restore only the literal
+  // <em>/</em> markers OpenSearch inserts, so no other markup in the source can execute.
+  const fragmentsHtml = cached.fragments
+    .map(f => esc(f).replaceAll('&lt;em&gt;', '<em>').replaceAll('&lt;/em&gt;', '</em>'))
+    .join('<br>');
+  return `<div style="font-size:.76rem;color:#333;background:#fffbe6;padding:.3rem .5rem;border-radius:3px;margin-bottom:.4rem">${fragmentsHtml}</div>`;
+}
+
+function renderCompareOnly(data) {
+  const card = document.getElementById('cmp-only-card');
+  const onlyA = data.only_in_a || [];
+  const onlyB = data.only_in_b || [];
+  if (!onlyA.length && !onlyB.length) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  const measures = cmpMetricFilter ? [cmpMetricFilter] : data.measures;
+  const renderList = (items, side) => {
+    if (!items.length) return '';
+    return `<div class="only-section-title">Only in Run ${side} (${items.length})</div>
+      <table style="margin-bottom:1rem">
+        <thead><tr><th>Query</th>${measures.map(m => `<th>${esc(metricLabel(m))}</th>`).join('')}</tr></thead>
+        <tbody>${items.map(item => {
+          const metrics = side === 'A' ? item.a : item.b;
+          const cells = measures.map(m => {
+            const v = metrics ? metrics[m] : null;
+            return `<td class="${v != null ? metricCls(v) : 'metric-lo'}">${fmt(v)}</td>`;
+          }).join('');
+          const queryCell = cmpType === 'ir'
+            ? `<code>${esc(item.query_id ?? item.index)}</code>` +
+              (item.query_text ? `<div style="font-size:.72rem;color:#666;margin-top:.15rem">${esc(item.query_text)}</div>` : '')
+            : (item.query_text ? esc(item.query_text) : `<code>${esc(item.query_id ?? item.index)}</code>`);
+          return `<tr><td>${queryCell}</td>${cells}</tr>`;
+        }).join('')}</tbody>
+      </table>`;
+  };
+
+  document.getElementById('cmp-only-content').innerHTML = renderList(onlyA, 'A') + renderList(onlyB, 'B');
 }
 </script>
 </body>
