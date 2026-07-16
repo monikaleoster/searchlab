@@ -84,6 +84,46 @@ def test_build_eval_command_metrics_unaffected_by_index():
     assert "--index" not in cmd
 
 
+# ── _build_eval_command run_id for query/ragas (Custom Run Name) ────
+
+def test_build_eval_command_query_appends_run_id_when_given():
+    cmd = routes._build_eval_command("query", "nfcorpus", run_id="run1")
+
+    assert cmd == ["uv", "run", "searchlab-eval", "query", "--dataset", "nfcorpus", "--run-id", "run1"]
+
+
+def test_build_eval_command_query_omits_run_id_when_blank():
+    cmd = routes._build_eval_command("query", "nfcorpus")
+
+    assert cmd == ["uv", "run", "searchlab-eval", "query", "--dataset", "nfcorpus"]
+    assert "--run-id" not in cmd
+
+
+def test_build_eval_command_ragas_appends_run_id_when_given():
+    cmd = routes._build_eval_command("ragas", "nfcorpus", run_id="run1")
+
+    assert cmd == ["uv", "run", "searchlab-eval", "ragas", "--dataset", "nfcorpus", "--run-id", "run1"]
+
+
+def test_build_eval_command_ragas_omits_run_id_when_blank():
+    cmd = routes._build_eval_command("ragas", "nfcorpus")
+
+    assert cmd == ["uv", "run", "searchlab-eval", "ragas", "--dataset", "nfcorpus"]
+    assert "--run-id" not in cmd
+
+
+def test_build_eval_command_ingest_unaffected_by_run_id():
+    cmd = routes._build_eval_command("ingest", "nfcorpus", run_id="run1")
+
+    assert "--run-id" not in cmd
+
+
+def test_build_eval_command_download_unaffected_by_run_id():
+    cmd = routes._build_eval_command("download", "nfcorpus", run_id="run1")
+
+    assert "--run-id" not in cmd
+
+
 # ── /api/query index override (Group 9) ─────────────────────────────
 
 def test_api_query_explicit_index_bypasses_resolve_index(monkeypatch):

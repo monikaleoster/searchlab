@@ -27,6 +27,15 @@ _OPENSEARCH_URL_DEPRECATED = click.option(
 )
 
 
+def _reject_if_run_exists(run_id: str) -> None:
+    if ".." in run_id or "/" in run_id or "\\" in run_id:
+        click.echo(f"Error: invalid run id '{run_id}'", err=True)
+        sys.exit(1)
+    if (Path("results") / run_id).exists():
+        click.echo(f"Error: run '{run_id}' already exists — choose a different name", err=True)
+        sys.exit(1)
+
+
 @click.group()
 def cli() -> None:
     """searchlab-eval — reproducible IR/RAG evaluation against BEIR datasets."""
@@ -123,6 +132,8 @@ def query(
 
     if run_id is None:
         run_id = f"{dataset}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
+    else:
+        _reject_if_run_exists(run_id)
 
     results_dir = Path("results") / run_id
     results_dir.mkdir(parents=True, exist_ok=True)
@@ -211,6 +222,8 @@ def ragas_cmd(dataset: str, slice_n: int, run_id: str | None, searchlab_url: str
 
     if run_id is None:
         run_id = f"{dataset}-ragas-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
+    else:
+        _reject_if_run_exists(run_id)
 
     run_dir = Path("results") / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
