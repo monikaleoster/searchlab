@@ -372,11 +372,26 @@ HTML_TEMPLATE = """<!DOCTYPE html>
           <option value="">All metrics</option>
         </select>
       </div>
+      <div class="field-sm" style="flex:0 0 160px">
+        <label for="cmp-row-filter">Rows</label>
+        <select id="cmp-row-filter" onchange="onCompareRowFilterChange()" disabled>
+          <option value="all">All</option>
+          <option value="improved">Improved in B</option>
+          <option value="regressed">Regressed in B</option>
+        </select>
+      </div>
     </div>
     <div id="cmp-status" style="margin-top:.5rem"></div>
   </div>
 
   <div id="cmp-content" style="display:none">
+    <div class="card" id="cmp-agg-card">
+      <div class="card-title">Aggregate</div>
+      <table id="cmp-agg-table">
+        <thead><tr><th>Measure</th><th>A</th><th>B</th><th>Δ</th></tr></thead>
+        <tbody id="cmp-agg-tbody"></tbody>
+      </table>
+    </div>
     <div class="card">
       <div class="card-title" id="cmp-title">Comparison</div>
       <table id="cmp-table">
@@ -433,6 +448,7 @@ let cmpSortKey      = { measure: 'ndcg_cut_10', part: 'delta' };
 let cmpSortAsc      = true;
 let cmpExpandedKey  = null;
 let cmpMetricFilter = '';
+let cmpRowFilter    = 'all';
 let cmpExpandedDocs = new Set();
 const cmpDocCache   = new Map();
 const cmpHighlightCache = new Map();
@@ -912,6 +928,7 @@ function onCompareTypeChange() {
   document.getElementById('cmp-content').style.display = 'none';
   document.getElementById('cmp-status').innerHTML = '';
   resetCompareMetricFilter();
+  resetCompareRowFilter();
   refreshCompareDatasetDropdown();
 }
 
@@ -927,6 +944,24 @@ function onCompareMetricFilterChange() {
   cmpMetricFilter = document.getElementById('cmp-metric-filter').value;
   renderCompareTable(cmpData);
   renderCompareOnly(cmpData);
+}
+
+function resetCompareRowFilter() {
+  cmpRowFilter = 'all';
+  const sel = document.getElementById('cmp-row-filter');
+  sel.value = 'all';
+  sel.disabled = true;
+}
+
+function onCompareRowFilterChange() {
+  cmpRowFilter = document.getElementById('cmp-row-filter').value;
+  renderCompareTable(cmpData);
+}
+
+// The metric whose delta drives the improved/regressed filter: the metric-column dropdown's
+// current selection, or the type's primary measure when that dropdown is on "All metrics".
+function activeFilterMetric() {
+  return cmpMetricFilter || PRIMARY_MEASURE[cmpType];
 }
 
 function refreshCompareDatasetDropdown() {
@@ -980,6 +1015,10 @@ async function runCompare() {
       data.measures.map(m => `<option value="${esc(m)}">${esc(metricLabel(m))}</option>`).join('');
     filterSel.value = '';
     filterSel.disabled = false;
+    cmpRowFilter = 'all';
+    const rowFilterSel = document.getElementById('cmp-row-filter');
+    rowFilterSel.value = 'all';
+    rowFilterSel.disabled = false;
     renderCompare();
   } catch(e) {
     statusEl.innerHTML = `<div class="alert alert-error">Network error: ${esc(e.message)}</div>`;
@@ -990,8 +1029,22 @@ function renderCompare() {
   const data = cmpData;
   document.getElementById('cmp-content').style.display = 'block';
   document.getElementById('cmp-title').textContent = `${data.run_a} vs ${data.run_b} — ${data.dataset}`;
+  renderCompareAggregate(data);
   renderCompareTable(data);
   renderCompareOnly(data);
+}
+
+// Always shows all shared measures, independent of the per-query metric-column filter
+// (F11) — that filter narrows the per-query table, not this summary block.
+function renderCompareAggregate(data) {
+  const measures = data.measures || [];
+  document.getElementById('cmp-agg-tbody').innerHTML = measures.map(m => {
+    const va = data.aggregate_a?.[m], vb = data.aggregate_b?.[m], d = data.aggregate_delta?.[m];
+    return `<tr><td>${esc(metricLabel(m))}</td>` +
+      `<td class="${va != null ? metricCls(va) : 'metric-lo'}">${fmt(va)}</td>` +
+      `<td class="${vb != null ? metricCls(vb) : 'metric-lo'}">${fmt(vb)}</td>` +
+      `<td class="${deltaCls(d)}">${d != null ? (d >= 0 ? '+' : '') + d.toFixed(3) : '-'}</td></tr>`;
+  }).join('');
 }
 
 function rowKey(row) { return cmpType === 'ir' ? row.query_id : row.index; }
@@ -1043,9 +1096,19 @@ function renderQueryCell(row) {
   return text + mismatch;
 }
 
+// Display-only row filter (no re-fetch, no effect on sort or on only-in-A/B sections):
+// judges each row by whichever metric currently drives the metric-column dropdown, using
+// the same |delta| < 0.01 grey-zone threshold as deltaCls().
+function passesRowFilter(row) {
+  if (cmpRowFilter === 'all') return true;
+  const d = row.delta[activeFilterMetric()];
+  if (d == null) return false;
+  return cmpRowFilter === 'improved' ? d > 0.01 : d < -0.01;
+}
+
 function renderCompareTable(data) {
   const measures = cmpMetricFilter ? [cmpMetricFilter] : data.measures;
-  const rows = [...data.rows];
+  const rows = data.rows.filter(passesRowFilter);
   const colCount = 1 + measures.length * 3;
 
   rows.sort((r1, r2) => {
@@ -1070,7 +1133,10 @@ function renderCompareTable(data) {
 
   const tbody = document.getElementById('cmp-tbody');
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align:center;color:#aaa;padding:1.5rem">No overlapping queries between these two runs.</td></tr>`;
+    const msg = data.rows.length && cmpRowFilter !== 'all'
+      ? 'No rows match the current filter.'
+      : 'No overlapping queries between these two runs.';
+    tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align:center;color:#aaa;padding:1.5rem">${msg}</td></tr>`;
     return;
   }
 

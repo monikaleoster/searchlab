@@ -32,6 +32,9 @@
 | AC21 | Clicking a `doc_id` inside the IR Judgement panel fetches and inlines that document's title/text | Behaves identically to the source-list `doc_id` click: `GET /api/eval/document` result shown inline under the clicked judgement entry; a doc already fetched via the source list is not re-fetched (shared cache); multiple judgement doc_id entries can be expanded at once; 404 shows a clear inline error | Blank on click, crash/stack trace, duplicate fetch of an already-cached doc, or only one judgement doc_id expandable at a time |
 | AC22 | Expanding an IR `doc_id` (source list or Judgement panel) fetches and shows real OpenSearch match highlighting for that document + query | `GET /api/eval/highlight?dataset=&docId=&query=` returns `{doc_id, fragments}` with matched terms wrapped in `<em>`; UI renders fragments above the plain text, matched terms visually emphasized, all other content escaped (view source / inspect element shows no unescaped document text as live HTML); doc in live index but no term overlap → empty fragments rendered as "No live-index match for this query" (not blank, not an error); doc not in live index → clear inline 404 message; RAG rows show no highlight fetch at all (check DevTools Network tab) | Blank on click, raw unescaped HTML injected into the page, wrong document's fragments shown, crash/stack trace on missing doc, or a highlight request fired for a RAG row |
 | AC23 | `doc_id`s common to an IR row's Judgement (qrels) data and its retrieved source list are visually marked in both places | Expanding a row's source list marks each `doc_id` also present in qrels, distinguishing score `>0` ("judged relevant") from score `==0` ("judged non-relevant"), independently for Run A and Run B; the Judgement panel marks each qrels `doc_id` also present in `sources_a`/`sources_b` with which run(s) retrieved it and at what rank; marking works regardless of which of the two (source list, Judgement panel) the user opens first, since expanding the source list triggers a background qrels fetch if not already cached; no new network endpoint is used (only the existing `/api/eval/judgement` fetch, now also triggered by row expansion); RAG rows show no such marking (no qrels/source-list concept) | No marks shown, marks wrong/inverted, marks require the Judgement panel to have been opened first (i.e. don't appear when only the source list was expanded), rank/run attribution wrong, or a new endpoint/request introduced |
+| AC24 | `/api/eval/compare` includes `aggregate_a`/`aggregate_b`/`aggregate_delta` for both IR and RAG | Values match each run's own `aggregate` dict in `ir_scores.json`/`rag_scores.json` for every shared measure; `aggregate_delta[m] == aggregate_b[m] - aggregate_a[m]` | Missing fields, values not matching the source JSON, or wrong sign |
+| AC25 | Compare tab renders an aggregate summary block above the per-query table | Shows measure / A / B / Δ for every shared measure, colored with the same convention as per-query Δ cells; stays showing all measures when the per-query metric-column filter (F11) is narrowed to one metric | Block missing, wrong values, or it gets narrowed by the per-query metric filter instead of staying independent |
+| AC26 | "All / Improved in B / Regressed in B" toggle filters the main table correctly | Selecting "Improved in B" shows only rows where the active metric's delta is `> 0.01`; "Regressed in B" shows only rows with delta `< -0.01`; rows in the grey zone or without a comparable delta appear only under "All"; only-in-A/only-in-B sections stay fully visible in every filter state; switching the metric-column dropdown while a filter is active re-evaluates it against the new metric | Wrong rows included/excluded, threshold not matching the existing grey-zone constant, only-in-A/B sections affected by the toggle, or filter not re-evaluating on metric-dropdown change |
 
 ---
 
@@ -198,14 +201,31 @@ Check: all behave exactly as before; no console errors; no layout shift from the
 - Run a RAG comparison (as in step 2) and open a row's Judgement panel — confirm no cross-reference
   marking UI appears (no qrels/source-list concept for RAG).
 
+### 14. Aggregate metrics comparison and improved/regressed filter (amendment 6, 2026-07-16)
+
+- Run an IR comparison (as in step 1). Confirm a summary block above the per-query table shows
+  each shared measure's aggregate A / B / Δ, matching the `aggregate` dict in each run's
+  `ir_scores.json` by hand-check. Narrow the per-query metric-column dropdown to a single measure
+  and confirm the aggregate block still shows all measures (unaffected by that filter).
+- Use the "All / Improved in B / Regressed in B" toggle: select "Improved in B" and confirm only
+  rows with the active metric's delta `> 0.01` are shown; select "Regressed in B" and confirm only
+  rows with delta `< -0.01` are shown; confirm rows near zero delta (or missing a comparable
+  value for that metric) appear only under "All". Confirm the only-in-A/only-in-B sections remain
+  fully visible in all three filter states.
+- With "Improved in B" active, switch the metric-column dropdown to a different measure and
+  confirm the filtered row set updates to reflect the newly active metric's deltas (not the
+  previous metric's).
+- Run a RAG comparison (as in step 2) and repeat the aggregate-block and filter checks against
+  `faithfulness`/`answer_relevancy` (and `context_recall`/`context_precision` if present).
+
 ---
 
 ## Merge Checklist
 
 > A phase is done or it is in progress. There is no "almost done." — Constitution § X
 
-- [ ] AC1–AC22 all pass.
-- [ ] Manual verification steps 1–12 completed; pass/fail noted for each.
+- [ ] AC1–AC26 all pass.
+- [ ] Manual verification steps 1–14 completed; pass/fail noted for each.
 - [ ] `compare_ir` / `compare_rag` covered by unit tests: matched rows, only-in-A/B, dataset
       mismatch (`ValueError`), missing run (`FileNotFoundError`), `query_text` attachment,
       RAG question-mismatch flagging.
@@ -214,6 +234,8 @@ Check: all behave exactly as before; no console errors; no layout shift from the
       error), missing dataset/qrels file (`FileNotFoundError`).
 - [ ] `compare_rag` unit tests cover `ground_truth` attachment and `ground_truth_mismatch`
       flagging.
+- [ ] `compare_ir` / `compare_rag` unit tests cover `aggregate_a`/`aggregate_b`/`aggregate_delta`
+      computation against each run's own `aggregate` dict.
 - [ ] `highlight_document` covered by unit tests: hit with highlighted terms, hit with no term
       overlap (empty fragments, not an error), doc not in index (`FileNotFoundError`).
 - [ ] `GET /api/eval/highlight` covered: 200 with fragments, 200 with empty fragments, 404 on
@@ -229,6 +251,7 @@ Check: all behave exactly as before; no console errors; no layout shift from the
 - [ ] `docs/wiki.md` updated with the Compare tab's usage, the RAG positional-join caveat, the
       metric filter, query text display, doc_id fetch-on-click behavior, the Judgement panel
       (qrels for IR, ground_truth for RAG), real OpenSearch match highlighting (IR only, live
-      index, on-demand), and the Judgement/retrieved cross-reference highlighting (Amendment 5).
+      index, on-demand), the Judgement/retrieved cross-reference highlighting (Amendment 5), and
+      the aggregate metrics summary plus improved/regressed-in-B filter (Amendment 6).
 - [ ] `prompts/history.md` updated with the prompt that initiated this session (Constitution
       § VII step 0).

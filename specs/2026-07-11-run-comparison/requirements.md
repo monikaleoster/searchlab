@@ -368,6 +368,63 @@ trigger in the other direction, since `sources_a`/`sources_b` are already availa
 
 ---
 
+## Amendment 6 (2026-07-16): Aggregate metrics comparison and improved/regressed filter
+
+A sixth refinement. Amendments 1–5 all operate at the per-query row level; there was still no
+way to see the two runs' overall (aggregate) numbers side by side without leaving the Compare
+tab and opening each run's Metrics tab separately, and no way to narrow the per-query table to
+just the queries that got better or worse in Run B without eyeballing every Δ cell. Both
+`ir_scores.json` and `rag_scores.json` already carry a top-level `aggregate` dict (the same
+numbers the Metrics tab's single-run view renders) alongside `per_query` — this amendment
+surfaces that existing data rather than computing anything new.
+
+### Aggregate metrics comparison
+
+- `/api/eval/compare` gains three additive top-level fields — `aggregate_a`, `aggregate_b`,
+  `aggregate_delta` — one entry per shared measure (the same `measures` intersection already
+  used for per-query rows), sourced directly from each run's own `aggregate` dict in
+  `ir_scores.json` / `rag_scores.json`. `aggregate_delta` uses the same `delta = b - a`
+  convention as every other delta in this feature.
+- The Compare tab renders these as a summary block above the per-query table: measure name,
+  Run A value, Run B value, Δ (colored with the same red/green/grey convention as the per-query
+  Δ columns). It is always visible once a comparison has been run, and shows **all** shared
+  measures regardless of the per-query metric-column filter (existing Amendment 1 / F11
+  dropdown) — that filter exists to keep a 50+ row table scannable; the aggregate block is a
+  single compact row, so there is no width problem for it to solve.
+- No new endpoint. No change to `ir_scores.json` / `rag_scores.json` — `aggregate` already
+  exists in both; this only exposes it through the comparison response.
+
+### Improved-in-B / regressed-in-B filter
+
+- A three-way toggle — **All / Improved in B / Regressed in B** — sits next to the existing
+  metric-column dropdown (F11). Default is **All** (identical to today's behavior).
+- The filter judges each row by whichever metric currently drives the metric-column dropdown: if
+  a specific measure is selected there, the filter uses that measure's delta; if the dropdown is
+  on "All metrics", the filter falls back to the run type's primary measure (`ndcg_cut_10` for
+  IR, `faithfulness` for RAG) — the same measure that already drives the default sort (see
+  "Default sort: biggest regression first" above). Changing the metric dropdown while a non-All
+  filter is active re-evaluates the filter against the newly selected metric.
+- Threshold: reuses the existing "grey / not comparable" band already used for Δ cell coloring
+  (`|delta| < 0.01`, Plan 4.2) rather than introducing a second threshold constant. A row is
+  "Improved in B" if the active metric's delta is `> 0.01`, "Regressed in B" if `< -0.01`. Rows
+  inside the grey band, or where the active metric isn't comparable for that row (missing on one
+  side, so no `delta` entry exists), are excluded from both filtered views — they remain visible
+  only under "All", matching the existing grey/non-comparable visual treatment.
+- This is a display-only filter, exactly like the metric-column filter: it changes which rows of
+  the already-fetched main table render, not the `/api/eval/compare` response, sort order, or the
+  only-in-A/only-in-B sections. Those sections have no Run B side to judge "improved" or
+  "regressed" against, so the toggle has no effect on them — they remain fully visible in every
+  filter state.
+
+| # | Requirement |
+|---|-------------|
+| F21 | `/api/eval/compare` response includes `aggregate_a`, `aggregate_b`, `aggregate_delta` — one entry per shared measure, sourced from each run's own top-level `aggregate` dict (already present in `ir_scores.json`/`rag_scores.json`), with `aggregate_delta = b - a`. Applies to both IR and RAG. |
+| F22 | The Compare tab shows an aggregate summary block (measure / A / B / Δ, same delta color convention as per-query columns) above the per-query table, always visible once a comparison has run, showing all shared measures regardless of the per-query metric-column filter's current selection. |
+| F23 | A three-way "All / Improved in B / Regressed in B" toggle next to the metric-column dropdown filters the main table's rows by the delta of whichever metric currently drives that dropdown (falling back to the type's primary measure when the dropdown is on "All metrics"), using the existing `|delta| < 0.01` grey-zone threshold to decide improved vs. regressed vs. excluded. |
+| F24 | The improved/regressed filter is display-only (no re-fetch, no change to sort order or to which measure the table is sorted by) and does not affect the only-in-A/only-in-B sections, which have no Run A/B delta to filter on and remain fully visible in every filter state. |
+
+---
+
 ## Out of Scope
 
 | Item | Notes |
