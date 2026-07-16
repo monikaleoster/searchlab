@@ -143,6 +143,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <button                data-tab="eval"    onclick="switchTab('eval')">Eval</button>
   <button                data-tab="metrics" onclick="switchTab('metrics')">Metrics</button>
   <button                data-tab="compare" onclick="switchTab('compare')">Compare</button>
+  <button                data-tab="indexes" onclick="switchTab('indexes')">Indexes</button>
 </nav>
 
 <div class="main">
@@ -221,10 +222,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <div class="card">
     <div class="card-title">Ingest PDF</div>
     <p style="font-size:.82rem;color:#666;margin-bottom:1rem">
-      Indexes a PDF into the default OpenSearch index (<code>searchlab-v0</code> or <code>$SEARCHLAB_INDEX</code>).
+      Indexes a PDF into the selected index below (defaults to the default OpenSearch index,
+      <code>searchlab-v0</code> or <code>$SEARCHLAB_INDEX</code>).
       Enter the path relative to the project root or an absolute path.
     </p>
     <div class="form-row">
+      <div class="field-sm" style="flex:0 0 130px">
+        <label for="ingest-dataset">Dataset</label>
+        <select id="ingest-dataset">
+          <option value="default">Default index</option>
+        </select>
+      </div>
       <div class="field">
         <label for="ingest-path">PDF Path</label>
         <input type="text" id="ingest-path" placeholder="test-corpus/sample.pdf" />
@@ -251,6 +259,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <div class="field-xs">
         <label for="eval-slice">Slice</label>
         <input type="number" id="eval-slice" value="100" min="1" placeholder="all" title="Limit queries for Download (optional)" />
+      </div>
+      <div class="field-sm" style="flex:0 0 170px">
+        <label for="eval-index">Index Override</label>
+        <select id="eval-index">
+          <option value="">Default for dataset</option>
+        </select>
       </div>
     </div>
     <div class="op-row">
@@ -406,6 +420,38 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   </div>
 </div>
 
+<!-- ════════════════════════════════════════════ INDEXES ══ -->
+<div id="tab-indexes" class="panel hidden">
+  <div class="card">
+    <div class="card-title">Create Index</div>
+    <p style="font-size:.82rem;color:#666;margin-bottom:1rem">
+      Creates a new OpenSearch index named <code>searchlab-&lt;name&gt;</code> from an uploaded
+      raw index-creation body (<code>{"settings": {...}, "mappings": {...}}</code>), applied as-is.
+      Ingest still writes its existing fixed document shape regardless of this schema's field names.
+    </p>
+    <div class="form-row">
+      <div class="field-sm" style="flex:0 0 180px">
+        <label for="idx-name">Name</label>
+        <input type="text" id="idx-name" placeholder="my-index" />
+      </div>
+      <div class="field">
+        <label for="idx-file">Schema JSON</label>
+        <input type="file" id="idx-file" accept="application/json" />
+      </div>
+      <button class="btn" id="idx-create-btn" onclick="createIndex()">Create</button>
+    </div>
+    <div id="idx-create-status" style="margin-top:.75rem"></div>
+  </div>
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      Existing Indexes
+      <button class="btn btn-sm btn-ghost" onclick="loadIndexes()">Refresh</button>
+    </div>
+    <div id="idx-list-status"></div>
+    <div id="idx-table-wrap">Loading&hellip;</div>
+  </div>
+</div>
+
 </div><!-- .main -->
 
 <script>
@@ -462,6 +508,8 @@ function switchTab(name) {
   document.getElementById('tab-' + name).classList.remove('hidden');
   document.querySelector('[data-tab="' + name + '"]').classList.add('active');
   window.location.hash = '#' + name;
+  if (name === 'indexes') loadIndexes();
+  if (name === 'eval') loadEvalIndexOptions();
 }
 
 // ── Init ─────────────────────────────────────────────────────────────
@@ -470,6 +518,7 @@ function switchTab(name) {
   const hash = window.location.hash.replace('#', '') || 'rag';
   switchTab(hash);
   loadEvalRuns();
+  loadDatasets();
   document.getElementById('rag-question').addEventListener('keydown', e => { if (e.key === 'Enter') askRag(); });
   document.getElementById('q-text').addEventListener('keydown', e => { if (e.key === 'Enter') runQuery(); });
 })();
@@ -591,6 +640,7 @@ function renderQueryResults(data, dataset) {
 async function runIngest() {
   const path = document.getElementById('ingest-path').value.trim();
   if (!path) { alert('Please enter a PDF path.'); return; }
+  const dataset = document.getElementById('ingest-dataset').value;
   const btn = document.getElementById('ingest-btn');
   btn.disabled = true;
   document.getElementById('ingest-spinner').classList.add('active');
@@ -598,7 +648,7 @@ async function runIngest() {
   try {
     const r = await fetch('/api/ingest', {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `pdfPath=${enc(path)}`
+      body: `pdfPath=${enc(path)}&dataset=${enc(dataset)}`
     });
     const data = await r.json();
     const statusEl = document.getElementById('ingest-status');
@@ -630,6 +680,7 @@ function runEvalOp(op) {
   const dataset = document.getElementById('eval-dataset').value;
   const slice   = document.getElementById('eval-slice').value.trim();
   const runId   = document.getElementById('eval-run-id').value.trim();
+  const index   = document.getElementById('eval-index').value;
 
   const log = document.getElementById('eval-log');
   log.textContent = '';
@@ -639,6 +690,7 @@ function runEvalOp(op) {
   if (op === 'download' && slice) url += `&slice=${enc(slice)}`;
   if (op === 'ragas'    && slice) url += `&slice=${enc(slice)}`;
   if (op === 'metrics')           url += `&runId=${enc(runId)}`;
+  if ((op === 'ingest' || op === 'query') && index) url += `&index=${enc(index)}`;
 
   if (evalSource) evalSource.close();
   setEvalBtns(true);
@@ -1457,6 +1509,119 @@ function renderCompareOnly(data) {
   };
 
   document.getElementById('cmp-only-content').innerHTML = renderList(onlyA, 'A') + renderList(onlyB, 'B');
+}
+
+// ── Eval index override (Group 9) ───────────────────────────────────
+// Independent of the eval-dataset (BEIR) dropdown: sourced from GET /api/indexes
+// (the same data loadIndexes() uses), not GET /api/datasets. Blank means "no override".
+async function loadEvalIndexOptions() {
+  const sel = document.getElementById('eval-index');
+  const prev = sel.value;
+  try {
+    const r = await fetch('/api/indexes');
+    const data = await r.json();
+    if (data.error) return;
+    sel.innerHTML = '<option value="">Default for dataset</option>' +
+      data.map(idx => `<option value="${esc(idx.index)}">${esc(idx.label)} (${esc(idx.index)})</option>`).join('');
+    if (data.some(idx => idx.index === prev)) sel.value = prev;
+  } catch (e) {
+    // Selector just keeps whatever options it already had.
+  }
+}
+
+// ── Indexes ──────────────────────────────────────────────────────────
+async function loadIndexes() {
+  const statusEl = document.getElementById('idx-list-status');
+  const tableEl  = document.getElementById('idx-table-wrap');
+  try {
+    const r = await fetch('/api/indexes');
+    const data = await r.json();
+    if (data.error) {
+      statusEl.innerHTML = `<div class="alert alert-error">${esc(data.error)}</div>`;
+      return;
+    }
+    statusEl.innerHTML = '';
+    renderIndexes(data);
+  } catch (e) {
+    statusEl.innerHTML = `<div class="alert alert-error">Network error: ${esc(e.message)}</div>`;
+    tableEl.innerHTML = '';
+  }
+}
+
+function renderIndexes(indexes) {
+  const el = document.getElementById('idx-table-wrap');
+  if (!indexes.length) {
+    el.innerHTML = '<p style="font-size:.82rem;color:#aaa">No searchlab-* indexes found.</p>';
+    return;
+  }
+  el.innerHTML = `<table>
+    <thead><tr><th>Index</th><th>Label</th><th>Docs</th><th>Schema Source</th><th>Created At</th></tr></thead>
+    <tbody>
+      ${indexes.map(idx => `<tr>
+        <td><code>${esc(idx.index)}</code></td>
+        <td>${esc(idx.label)}</td>
+        <td>${idx.docCount}</td>
+        <td>${esc(idx.schemaSource)}</td>
+        <td style="font-size:.72rem;color:#888">${idx.createdAt ? esc(idx.createdAt.slice(0,19).replace('T',' ')) : '&mdash;'}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+async function createIndex() {
+  const name = document.getElementById('idx-name').value.trim();
+  const fileInput = document.getElementById('idx-file');
+  const statusEl = document.getElementById('idx-create-status');
+  statusEl.innerHTML = '';
+  if (!name) { statusEl.innerHTML = '<div class="alert alert-error">Please enter an index name.</div>'; return; }
+  if (!fileInput.files.length) { statusEl.innerHTML = '<div class="alert alert-error">Please choose a schema JSON file.</div>'; return; }
+
+  const formData = new FormData();
+  formData.append('name', name);
+  formData.append('schemaFile', fileInput.files[0]);
+
+  const btn = document.getElementById('idx-create-btn');
+  btn.disabled = true;
+  try {
+    // No explicit Content-Type here — the browser sets the multipart boundary itself;
+    // setting it manually is a classic bug that breaks multipart uploads.
+    const r = await fetch('/api/indexes', { method: 'POST', body: formData });
+    const data = await r.json();
+    if (data.error) {
+      statusEl.innerHTML = `<div class="alert alert-error">${esc(data.error)}</div>`;
+      return;
+    }
+    statusEl.innerHTML = `<div class="alert alert-ok">Created index <code>${esc(data.index)}</code>.</div>`;
+    document.getElementById('idx-name').value = '';
+    fileInput.value = '';
+    loadIndexes();
+    loadDatasets();
+    loadEvalIndexOptions();
+  } catch (e) {
+    statusEl.innerHTML = `<div class="alert alert-error">Network error: ${esc(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Datasets (shared dropdown source for RAG / Query / Ingest) ───────
+async function loadDatasets() {
+  try {
+    const r = await fetch('/api/datasets');
+    const datasets = await r.json();
+    ['rag-dataset', 'q-dataset', 'ingest-dataset'].forEach(id => populateDatasetSelect(id, datasets));
+  } catch (e) {
+    // Dropdowns just keep whatever options they already had.
+  }
+}
+
+// Preserves the current selection across a refresh (e.g. after creating a new index)
+// so a user mid-session doesn't silently lose their chosen dataset.
+function populateDatasetSelect(selectId, datasets) {
+  const sel = document.getElementById(selectId);
+  const prev = sel.value;
+  sel.innerHTML = datasets.map(d => `<option value="${esc(d.key)}">${esc(d.label)}</option>`).join('');
+  if (datasets.some(d => d.key === prev)) sel.value = prev;
 }
 </script>
 </body>

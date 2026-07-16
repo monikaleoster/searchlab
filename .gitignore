@@ -14,3 +14,4 @@ dist/
 # posts (drafts)
 posts/
 searchlab-eval/results
+service/searchlab/data/

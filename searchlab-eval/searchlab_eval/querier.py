@@ -6,11 +6,20 @@ import requests
 from tqdm import tqdm
 
 
-def run_query(query_text: str, searchlab_url: str, top_k: int, dataset: str) -> list[dict]:
+def run_query(
+    query_text: str,
+    searchlab_url: str,
+    top_k: int,
+    dataset: str,
+    index: str | None = None,
+) -> list[dict]:
+    data = {"query": query_text, "topK": str(top_k)}
+    data["index"] = index if index else ""
+    data["dataset"] = "" if index else dataset
     try:
         resp = requests.post(
             f"{searchlab_url}/api/query",
-            data={"query": query_text, "topK": str(top_k), "dataset": dataset},
+            data=data,
             timeout=30,
         )
     except requests.exceptions.ConnectionError:
@@ -42,11 +51,12 @@ def run_queries(
     searchlab_url: str,
     top_k: int,
     dataset: str,
+    index: str | None = None,
 ) -> dict[str, list[dict]]:
     results = {}
     for query_id, text in tqdm(queries.items(), desc="Querying", unit="q"):
         try:
-            results[query_id] = run_query(text, searchlab_url, top_k, dataset)
+            results[query_id] = run_query(text, searchlab_url, top_k, dataset, index=index)
         except RuntimeError as e:
             print(f"Warning: query {query_id!r} failed: {e}", file=sys.stderr)
             results[query_id] = []
