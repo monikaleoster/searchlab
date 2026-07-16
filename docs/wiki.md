@@ -539,6 +539,16 @@ POST `index=<index>` to `/api/query` instead of `dataset=<dataset>`, which makes
 way — it matches on `doc_id` against the dataset's local `qrels/test.tsv`, which doesn't depend on
 which index stored the documents.
 
+**Custom run naming:** The Eval tab's **Run Name** field (`#eval-run-id`, previously labeled "Run
+ID (for Metrics)") optionally names a new `query` or `ragas` run in addition to its existing role
+selecting an existing run for **Compute Metrics**. Left blank, `query`/`ragas` auto-generate
+`{dataset}-{timestamp}` / `{dataset}-ragas-{timestamp}` exactly as before. When set, `runEvalOp()`
+appends `&runId=<name>` for `query`/`ragas` too; `_build_eval_command()` appends `--run-id <name>`;
+`cli.py`'s `query`/`ragas` commands use it verbatim as the `results/<name>/` directory name. A name
+colliding with an existing `results/<name>/` directory is rejected with a non-zero exit and a clear
+stderr message *before* any querying/generation work starts — it is never silently overwritten.
+`metrics`'s existing required-`runId` behavior is unchanged.
+
 ```mermaid
 sequenceDiagram
     actor User

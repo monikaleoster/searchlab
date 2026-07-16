@@ -60,7 +60,9 @@ def highlight_document(client: OpenSearch, query: str, doc_id: str, index: str) 
                     "minimum_should_match": 0,
                 }
             },
-            "highlight": {"fields": {"chunk_text": {}}},
+            "highlight": {"pre_tags": ["<b>"],
+                          "post_tags": ["</b>"],
+                          "fields": {"chunk_text": {}}},
             "size": 1,
         },
     )

@@ -230,6 +230,8 @@ def _build_eval_command(op: str, dataset: str, slice_val: str = "", run_id: str 
             cmd = ["uv", "run", "searchlab-eval", "query", "--dataset", dataset]
             if index:
                 cmd += ["--index", index]
+            if run_id:
+                cmd += ["--run-id", run_id]
         case "metrics":
             if not run_id:
                 raise ValueError("runId is required for metrics")
@@ -238,6 +240,8 @@ def _build_eval_command(op: str, dataset: str, slice_val: str = "", run_id: str 
             cmd = ["uv", "run", "searchlab-eval", "ragas", "--dataset", dataset]
             if slice_val:
                 cmd += ["--slice", slice_val]
+            if run_id:
+                cmd += ["--run-id", run_id]
         case _:
             raise ValueError(f"Unknown op: {op}")
     return cmd

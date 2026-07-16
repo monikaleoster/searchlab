@@ -394,3 +394,42 @@ and `dataset` fields on every call (empty string for whichever is not in effect)
 conditionally omitting one — functionally identical to the spec's "instead of" wording since
 `api_query` treats an empty `index` as absent, and simpler than building the request body
 conditionally.
+
+## Session 8 — Custom Run Name (2026-07-16)
+
+**Model:** Claude Sonnet 5
+**Branch:** 2026-07-16-custom-run-name
+
+**Prompt summary:**
+> Implement the remaining task groups in `specs/2026-07-16-custom-run-name/`. All 5 groups were
+> unimplemented at session start (`--run-id` already existed as a CLI flag on `query`/`ragas` but
+> was unused by the web UI/route layer).
+
+**Outcome:**
+- `searchlab-eval/searchlab_eval/cli.py`: new `_reject_if_run_exists(run_id)` helper (path-traversal
+  chars rejected, then checks `results/<run_id>` existence) called from `query` and `ragas_cmd`
+  only when `--run-id` was explicitly supplied by the caller — the auto-generated
+  `{dataset}-{timestamp}` / `{dataset}-ragas-{timestamp}` path is never subject to the check, so
+  omitted-flag behavior is byte-for-byte unchanged.
+- `service/searchlab/web/routes.py`: `_build_eval_command`'s `"query"` and `"ragas"` branches
+  append `--run-id <run_id>` when non-empty, mirroring the existing `index` handling in the same
+  function; `"download"`/`"ingest"` remain unaffected by `run_id`.
+- `service/searchlab/web/html.py`: `#eval-run-id` field relabeled "Run Name" (was "Run ID (for
+  Metrics)") with an updated placeholder/title clarifying it's optional for Query/RAG Eval;
+  `runEvalOp()` now sends `&runId=<value>` for `query`/`ragas` when non-blank, in addition to its
+  existing unconditional send for `metrics`.
+- Tests: `test_cli.py` gained 6 new cases (3 each for `query`/`ragas`) — collision rejected with
+  the mocked run function never called, a new name succeeds and writes into `results/<name>/`, and
+  an unrelated pre-existing `results/` entry doesn't trip the guard on the auto-generated path;
+  ragas cases mock `searchlab_eval.rag_eval.generate`/`score` directly (module-level functions, no
+  existing ragas CLI test to follow, so this establishes the pattern). `test_routes.py` gained 6
+  `_build_eval_command` cases mirroring the existing index-override tests' style: append-when-given
+  and omit-when-blank for `query`/`ragas`, plus `ingest`/`download` unaffected-by-`run_id` checks.
+- Full suite: `searchlab-eval` 41 passed, `service` 76 passed.
+- Not done this session: manual end-to-end verification against a live `searchlab serve` +
+  OpenSearch (Validation.md steps 1–8) — no live service was started in this session, so those
+  steps are unverified beyond the automated test suite and code inspection. Flagged to the user.
+- `docs/wiki.md` §4.4 gained a "Custom run naming" paragraph describing the Run Name field's dual
+  role and the collision-is-a-hard-error behavior.
+
+**Deviations from plan (with rationale):** None.

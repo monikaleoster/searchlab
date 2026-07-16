@@ -273,8 +273,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <button class="btn eval-op-btn" onclick="runEvalOp('query')">Query</button>
       <span style="flex:1"></span>
       <div class="field" style="flex:0 0 210px">
-        <label for="eval-run-id">Run ID (for Metrics)</label>
-        <input type="text" id="eval-run-id" placeholder="e.g. bm25_phase0" />
+        <label for="eval-run-id">Run Name</label>
+        <input type="text" id="eval-run-id" placeholder="optional, e.g. bm25_shingles" title="Custom name for a new Query/RAG Eval run, or the run to target for Compute Metrics" />
       </div>
       <button class="btn eval-op-btn" onclick="runEvalOp('metrics')">Compute Metrics</button>
       <button class="btn eval-op-btn" onclick="runEvalOp('ragas')">RAG Eval</button>
@@ -690,6 +690,7 @@ function runEvalOp(op) {
   if (op === 'download' && slice) url += `&slice=${enc(slice)}`;
   if (op === 'ragas'    && slice) url += `&slice=${enc(slice)}`;
   if (op === 'metrics')           url += `&runId=${enc(runId)}`;
+  if ((op === 'query' || op === 'ragas') && runId) url += `&runId=${enc(runId)}`;
   if ((op === 'ingest' || op === 'query') && index) url += `&index=${enc(index)}`;
 
   if (evalSource) evalSource.close();
@@ -1473,9 +1474,10 @@ function renderHighlightFragments(dataset, docId, queryText) {
   }
   // Fragments are OpenSearch's copy of ingested document text, not something this
   // feature controls — escape everything first, then restore only the literal
-  // <em>/</em> markers OpenSearch inserts, so no other markup in the source can execute.
+  // <b>/</b> markers configured as OpenSearch's highlight pre_tags/post_tags in
+  // bm25_searcher.py, so no other markup in the source can execute.
   const fragmentsHtml = cached.fragments
-    .map(f => esc(f).replaceAll('&lt;em&gt;', '<em>').replaceAll('&lt;/em&gt;', '</em>'))
+    .map(f => esc(f).replaceAll('&lt;b&gt;', '<b>').replaceAll('&lt;/b&gt;', '</b>'))
     .join('<br>');
   return `<div style="font-size:.76rem;color:#333;background:#fffbe6;padding:.3rem .5rem;border-radius:3px;margin-bottom:.4rem">${fragmentsHtml}</div>`;
 }

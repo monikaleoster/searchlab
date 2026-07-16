@@ -69,3 +69,91 @@ def test_query_with_index_passes_override_through():
 
     assert result.exit_code == 0, result.output
     assert mock_run_queries.call_args.kwargs["index"] == "searchlab-custom"
+
+
+# ── query --run-id collision guard ───────────────────────────────────
+
+def test_query_run_id_collision_is_rejected():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        _write_queries("nfcorpus")
+        Path("results/run1").mkdir(parents=True)
+        with patch("searchlab_eval.querier.run_queries") as mock_run_queries:
+            result = runner.invoke(cli, ["query", "--dataset", "nfcorpus", "--run-id", "run1"])
+
+    assert result.exit_code != 0
+    assert "run1" in result.output
+    mock_run_queries.assert_not_called()
+
+
+def test_query_run_id_new_name_succeeds():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        _write_queries("nfcorpus")
+        with patch("searchlab_eval.querier.run_queries", return_value={"q1": []}):
+            result = runner.invoke(cli, ["query", "--dataset", "nfcorpus", "--run-id", "run1"])
+        assert Path("results/run1/raw_results.json").exists()
+
+    assert result.exit_code == 0, result.output
+
+
+def test_query_auto_generated_run_id_unaffected_by_existing_results_dir():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        _write_queries("nfcorpus")
+        Path("results/some-other-run").mkdir(parents=True)
+        with patch("searchlab_eval.querier.run_queries", return_value={"q1": []}):
+            result = runner.invoke(cli, ["query", "--dataset", "nfcorpus"])
+
+    assert result.exit_code == 0, result.output
+
+
+# ── ragas --run-id collision guard ───────────────────────────────────
+
+_RAGAS_RESULTS = [{
+    "query_id": "q1",
+    "question": "hello",
+    "contexts": [],
+    "answer": "world",
+    "ground_truth": None,
+}]
+_RAGAS_SCORE = ({"faithfulness": 1.0}, {"q1": {"faithfulness": 1.0}}, ["faithfulness"])
+
+
+def test_ragas_run_id_collision_is_rejected():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        _write_queries("nfcorpus")
+        Path("results/run1").mkdir(parents=True)
+        with patch("searchlab_eval.rag_eval.generate") as mock_generate, \
+             patch("searchlab_eval.rag_eval.score") as mock_score:
+            result = runner.invoke(cli, ["ragas", "--dataset", "nfcorpus", "--run-id", "run1"])
+
+    assert result.exit_code != 0
+    assert "run1" in result.output
+    mock_generate.assert_not_called()
+    mock_score.assert_not_called()
+
+
+def test_ragas_run_id_new_name_succeeds():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        _write_queries("nfcorpus")
+        with patch("searchlab_eval.rag_eval.generate", return_value=_RAGAS_RESULTS), \
+             patch("searchlab_eval.rag_eval.score", return_value=_RAGAS_SCORE):
+            result = runner.invoke(cli, ["ragas", "--dataset", "nfcorpus", "--run-id", "run1"])
+        assert Path("results/run1/rag_results.json").exists()
+
+    assert result.exit_code == 0, result.output
+
+
+def test_ragas_auto_generated_run_id_unaffected_by_existing_results_dir():
+    runner = CliRunner()
+    with runner.isolated_filesystem():
+        _write_queries("nfcorpus")
+        Path("results/some-other-run").mkdir(parents=True)
+        with patch("searchlab_eval.rag_eval.generate", return_value=_RAGAS_RESULTS), \
+             patch("searchlab_eval.rag_eval.score", return_value=_RAGAS_SCORE):
+            result = runner.invoke(cli, ["ragas", "--dataset", "nfcorpus"])
+
+    assert result.exit_code == 0, result.output
