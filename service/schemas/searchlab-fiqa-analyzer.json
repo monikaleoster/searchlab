@@ -1,0 +1,57 @@
+{
+    "mappings": {
+        "properties": {
+            "chunk_id": {
+                "type": "text",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                    }
+                }
+            },
+            "chunk_position": {
+                "type": "long"
+            },
+            "chunk_text": {
+                "type": "text",
+                "analyzer": "my_stemmer_analyzer",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                    }
+                }
+            },
+            "ingested_at": {
+                "type": "date"
+            },
+            "page_number": {
+                "type": "long"
+            },
+            "source_filename": {
+                "type": "text",
+                "fields": {
+                    "keyword": {
+                        "type": "keyword",
+                        "ignore_above": 256
+                    }
+                }
+            }
+        }
+    },
+    "settings": {
+        "analysis": {
+            "analyzer": {
+                "my_stemmer_analyzer": {
+                    "type": "custom",
+                    "tokenizer": "standard",
+                    "filter": [
+                        "lowercase",
+                        "porter_stem"
+                    ]
+                }
+            }
+        }
+    }
+}

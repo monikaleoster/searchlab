@@ -256,28 +256,85 @@
 
 8.2 `docs/wiki.md`: document the Indexes tab (how to view indexes, how to create one from a
     schema file, the naming convention `searchlab-<name>`, and the explicit caveat that ingest
-    still writes its fixed document shape regardless of the uploaded schema's field names).
+    still writes its fixed document shape regardless of the uploaded schema's field names), and
+    the Eval tab's index-selector override for Ingest/Query described in Group 9.
+
+---
+
+## Group 9 — Eval Ingest/Query Index Override
+
+**Where:** `service/searchlab/web/routes.py`, `searchlab-eval/searchlab_eval/cli.py`,
+`searchlab-eval/searchlab_eval/querier.py`, `service/searchlab/web/html.py`
+
+> Separate from Group 5's `GET /api/datasets`-driven dropdowns: this gives the Eval tab's
+> Ingest/Query steps a *raw index name* override, independent of the BEIR dataset dropdown they
+> already have. `_resolve_index` (Group 3.4) is key-based and stays untouched; this instead adds
+> an explicit override path that bypasses it when the user has picked a specific index.
+
+9.1 `service/searchlab/web/routes.py` — `/api/query` (`:87-114`) gains `index: str = Form("")`.
+    When non-empty, use it directly as the target index and skip `_resolve_index(dataset)`
+    entirely; when empty (the default), behavior is unchanged from today.
+
+9.2 `_build_eval_command` (`routes.py:218-238`) gains an `index: str = ""` parameter. When
+    non-empty, append `--index <index>` to the `ingest` and `query` subcommands only (`download`,
+    `metrics`, `metrics ir`, and `ragas` have no index concept and are left alone).
+
+9.3 `/api/eval/stream` (`routes.py:241-269`) gains `index: str = Query("")`, passed through to
+    `_build_eval_command` (9.2).
+
+9.4 `searchlab-eval/searchlab_eval/cli.py` — `ingest` command (`:69-92`) gains `--index` (default
+    `None`). When provided, use it verbatim as the target index instead of computing
+    `f"searchlab-{dataset}"`; the completion message (`:92`) reflects the actual target index used.
+    When omitted, behavior is byte-for-byte what it is today.
+
+9.5 `cli.py` — `query` command (`:95-133`) gains `--index` (default `None`), passed through to
+    `run_queries(..., index=index)` (9.6).
+
+9.6 `searchlab-eval/searchlab_eval/querier.py` — `run_query` / `run_queries` (`:9-53`) gain an
+    `index: str | None = None` parameter. When set, POST `index=index` as the form field to
+    `/api/query` instead of `dataset=dataset`, matching the override added in 9.1. When `None`
+    (the default), POST `dataset=dataset` exactly as today — no behavior change for callers that
+    don't pass it.
+
+9.7 `service/searchlab/web/html.py` — Eval tab (`:248-263`) gains `<select id="eval-index">`
+    next to the existing `#eval-dataset` selector, populated from `GET /api/indexes` (same fetch
+    the Indexes tab's table uses — Group 5.1's `loadIndexes()` data shape, not a new endpoint).
+    First option is blank ("Default for dataset") meaning "no override" — the current behavior.
+    Populated on switching to the Eval tab (extend `switchTab`'s per-tab dispatch, same pattern as
+    Group 5.1) and refreshed whenever `createIndex()` (Group 5.2) succeeds, alongside its existing
+    `loadIndexes()`/`loadDatasets()` calls, so a just-created index is immediately selectable here
+    too.
+
+9.8 `runEvalOp(op)` (`html.py:655-687`) reads `#eval-index`'s value; when non-blank and `op` is
+    `'ingest'` or `'query'`, appends `&index=${enc(index)}` to the `/api/eval/stream` URL built at
+    `:665`. Left blank, the URL is unchanged from today and both CLI commands fall back to their
+    existing dataset-derived index.
 
 ---
 
 ## Definition of Done
 
-- [ ] `GET /api/indexes` lists every `searchlab-*` index with a live document count, merging
+- [x] `GET /api/indexes` lists every `searchlab-*` index with a live document count, merging
       registry metadata for indexes created through this feature
-- [ ] `POST /api/indexes` creates a new index from an uploaded raw OpenSearch schema JSON + name
+- [x] `POST /api/indexes` creates a new index from an uploaded raw OpenSearch schema JSON + name
       field; rejects invalid names, duplicate names, invalid JSON, and OpenSearch-rejected
       mappings with clear, distinct error messages
-- [ ] A successfully created index is recorded in `service/searchlab/data/index_registry.json`
+- [x] A successfully created index is recorded in `service/searchlab/data/index_registry.json`
       and immediately appears in both `GET /api/indexes` and `GET /api/datasets`
-- [ ] `GET /api/datasets` returns the built-in BEIR entries plus every registry entry
-- [ ] RAG, Query, and Ingest tabs' dataset dropdowns are populated from `GET /api/datasets`
+- [x] `GET /api/datasets` returns the built-in BEIR entries plus every registry entry
+- [x] RAG, Query, and Ingest tabs' dataset dropdowns are populated from `GET /api/datasets`
       instead of hardcoded options, and a newly created index is selectable there without a
       restart or code change
-- [ ] Ingest tab has a dataset selector; PDF ingest targets the selected index; default behavior
+- [x] Ingest tab has a dataset selector; PDF ingest targets the selected index; default behavior
       (no selection change) still targets the same default index as before this change
-- [ ] Eval, Metrics, and Compare tabs' dataset dropdowns are unchanged
-- [ ] Indexes tab renders the index table and create-index form; both wired to the new endpoints
-- [ ] No changes to `index_chunks` / `index_corpus_docs`'s document shape
-- [ ] No changes to `searchlab-eval`'s behavior or output schemas
-- [ ] Existing tests still pass; new unit tests cover `index_admin.create_index` /
+- [x] Eval, Metrics, and Compare tabs' *dataset* dropdowns are unchanged (still BEIR-only); the
+      Eval tab's new *index* selector (Group 9) is additive and defaults to no override
+- [x] Eval tab's Ingest/Query steps target the selected index when one is chosen via the new
+      `--index` override; leaving the selector blank reproduces today's `searchlab-<dataset>`
+      behavior exactly, with no change to `metrics`/`ragas` output schemas
+- [x] Indexes tab renders the index table and create-index form; both wired to the new endpoints
+- [x] No changes to `index_chunks` / `index_corpus_docs`'s document shape
+- [x] No changes to `searchlab-eval`'s default behavior or output schemas when the new `--index`
+      option is omitted
+- [x] Existing tests still pass; new unit tests cover `index_admin.create_index` /
       `list_indexes` and `index_registry`'s load/save/find functions

@@ -28,7 +28,9 @@ Add an **Indexes** tab that lets a user:
    (`settings` / `mappings`), with a separate name field, via the browser.
 
 A newly created index is also usable as a target dataset in the existing **RAG**, **Query**, and
-**Ingest** tabs (not Eval/Metrics/Compare — see "Eval tabs are out of reach" below).
+**Ingest** tabs (not Eval/Metrics/Compare's *dataset* picker — see "Eval tabs are out of reach"
+below). The **Eval** tab's Ingest/Query steps additionally gain their own, separate index-target
+override — see "Eval Ingest/Query gain an independent index-target override" below.
 
 ---
 
@@ -106,6 +108,28 @@ integrating custom indexes into those three tabs' dataset pickers is not just de
 meaningful without also building a way to supply queries/qrels for a custom index, which is well
 beyond this feature's objective. Their dropdowns are unchanged.
 
+This is deliberately narrower than it sounds, and doesn't preclude the index-target override
+described next: the *dataset* picker (which BEIR files supply queries/corpus/qrels) staying
+BEIR-only is a different thing from *which OpenSearch index* the Eval tab's Ingest/Query steps
+read and write. The former is what's "out of reach" here; the latter gets its own override below.
+
+### Eval Ingest/Query gain an independent index-target override
+
+Today the Eval tab's **Ingest** step (`searchlab-eval ingest --dataset <dataset>`) always writes
+the downloaded BEIR corpus into `searchlab-<dataset>` (hardcoded in
+`searchlab-eval/searchlab_eval/cli.py`), and the **Query** step always searches that same
+dataset-derived index via `_resolve_index`'s key lookup. There is no way to point either step at a
+different index — e.g. to ingest `nfcorpus`'s corpus into a custom-schema index created via the
+Indexes tab, to see how that mapping performs against the same queries/qrels.
+
+The Eval tab gains a second selector, independent of the existing BEIR dataset dropdown: an index
+picker sourced from `GET /api/indexes` (built-in + custom indexes, same list the Indexes tab
+shows). Leaving it unset preserves today's behavior exactly (`searchlab-<dataset>`). Setting it
+redirects **both** Ingest and Query to the chosen index — Ingest writes the corpus there, and
+Query searches it — so a full run stays coherent instead of Ingest and Query silently diverging.
+Metrics is unaffected: nDCG/MAP/Recall match on `doc_id` against the dataset's local qrels file,
+which doesn't depend on which index stored the documents.
+
 ### Delete is out of scope for this pass
 
 View + create only. No delete/drop-index UI or endpoint in this pass.
@@ -134,6 +158,10 @@ following the same pattern the Compare tab established.
 | F11 | The Indexes tab shows a table: index name, label, live document count, schema source (e.g. "Uploaded" vs. "Pre-existing"), created-at — with a manual refresh control. |
 | F12 | The Indexes tab has a create-index form: name field + file picker for the schema JSON + submit; shows success/error inline, and refreshes the index list and dataset dropdowns (F8) on success. |
 | F13 | Eval, Metrics, and Compare tabs' dataset dropdowns are unchanged — they continue to list only BEIR-downloaded datasets, since those tabs depend on local `queries.jsonl`/`corpus.jsonl`/`qrels` files a custom index doesn't have. |
+| F14 | The Eval tab gains an index selector populated from `GET /api/indexes`, independent of the existing BEIR dataset dropdown, defaulting to no override (behaves exactly as today, i.e. `searchlab-<dataset>`). |
+| F15 | The Eval tab's **Ingest** step writes the downloaded BEIR corpus into the selected index when one is chosen, instead of always `searchlab-<dataset>`. |
+| F16 | The Eval tab's **Query** step searches the selected index when one is chosen, instead of always the dataset-derived index. |
+| F17 | The Eval tab's **Metrics** step is unaffected by the index selector — nDCG/MAP/Recall continue to match on `doc_id` against the dataset's local qrels file regardless of which index Ingest/Query targeted. |
 
 ---
 
