@@ -31,12 +31,12 @@ def _write_qrels(tmp_path, dataset, rows):
     (d / "test.tsv").write_text("\n".join(lines))
 
 
-def _ir_scores(dataset="nfcorpus", per_query=None, measures=None):
+def _ir_scores(dataset="nfcorpus", per_query=None, measures=None, aggregate=None):
     return {
         "dataset": dataset,
         "computed_at": "2026-01-01T00:00:00Z",
         "measures": measures or ["ndcg_cut_10", "recall_10"],
-        "aggregate": {},
+        "aggregate": aggregate if aggregate is not None else {},
         "per_query": per_query or {},
     }
 
@@ -45,12 +45,12 @@ def _raw_results(results=None):
     return {"results": results or {}}
 
 
-def _rag_scores(dataset="nfcorpus", per_query=None, measures=None):
+def _rag_scores(dataset="nfcorpus", per_query=None, measures=None, aggregate=None):
     return {
         "dataset": dataset,
         "computed_at": "2026-01-01T00:00:00Z",
         "measures": measures or ["faithfulness", "answer_relevancy"],
-        "aggregate": {},
+        "aggregate": aggregate if aggregate is not None else {},
         "per_query": per_query or {},
     }
 
@@ -121,6 +121,24 @@ def test_compare_ir_attaches_sources_when_raw_results_present(tmp_path):
     row = result["rows"][0]
     assert row["sources_a"] == [{"doc_id": "D1", "score": 1.0, "rank": 1}]
     assert row["sources_b"] is None
+
+
+def test_compare_ir_computes_aggregate_delta(tmp_path):
+    _write(tmp_path, "run-a", "ir_scores.json", _ir_scores(
+        per_query={"Q1": {"ndcg_cut_10": 0.5, "recall_10": 0.4}},
+        aggregate={"ndcg_cut_10": 0.5, "recall_10": 0.4},
+    ))
+    _write(tmp_path, "run-b", "ir_scores.json", _ir_scores(
+        per_query={"Q1": {"ndcg_cut_10": 0.8, "recall_10": 0.4}},
+        aggregate={"ndcg_cut_10": 0.8, "recall_10": 0.3},
+    ))
+
+    result = compare.compare_ir("run-a", "run-b")
+
+    assert result["aggregate_a"] == {"ndcg_cut_10": 0.5, "recall_10": 0.4}
+    assert result["aggregate_b"] == {"ndcg_cut_10": 0.8, "recall_10": 0.3}
+    assert result["aggregate_delta"]["ndcg_cut_10"] == pytest.approx(0.3)
+    assert result["aggregate_delta"]["recall_10"] == pytest.approx(-0.1)
 
 
 def test_compare_ir_dataset_mismatch_raises_value_error(tmp_path):
@@ -194,6 +212,30 @@ def test_compare_rag_different_slice_sizes_surfaces_overflow(tmp_path):
     assert len(result["only_in_b"]) == 1
     assert result["only_in_b"][0]["query_id"] == "Q2"
     assert result["only_in_b"][0]["index"] == 1
+
+
+def test_compare_rag_computes_aggregate_delta(tmp_path):
+    _write(tmp_path, "run-a", "rag_scores.json", _rag_scores(
+        per_query={"0": {"faithfulness": 0.5, "answer_relevancy": 0.6}},
+        aggregate={"faithfulness": 0.5, "answer_relevancy": 0.6},
+    ))
+    _write(tmp_path, "run-a", "rag_results.json", _rag_results([
+        {"query_id": "Q1", "question": "q1?", "answer": "a1", "contexts": [], "ground_truth": None},
+    ]))
+    _write(tmp_path, "run-b", "rag_scores.json", _rag_scores(
+        per_query={"0": {"faithfulness": 0.9, "answer_relevancy": 0.6}},
+        aggregate={"faithfulness": 0.9, "answer_relevancy": 0.4},
+    ))
+    _write(tmp_path, "run-b", "rag_results.json", _rag_results([
+        {"query_id": "Q1", "question": "q1?", "answer": "b1", "contexts": [], "ground_truth": None},
+    ]))
+
+    result = compare.compare_rag("run-a", "run-b")
+
+    assert result["aggregate_a"] == {"faithfulness": 0.5, "answer_relevancy": 0.6}
+    assert result["aggregate_b"] == {"faithfulness": 0.9, "answer_relevancy": 0.4}
+    assert result["aggregate_delta"]["faithfulness"] == pytest.approx(0.4)
+    assert result["aggregate_delta"]["answer_relevancy"] == pytest.approx(-0.2)
 
 
 def test_compare_rag_dataset_mismatch_raises_value_error(tmp_path):

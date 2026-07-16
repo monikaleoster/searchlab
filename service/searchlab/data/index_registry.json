@@ -1,0 +1,16 @@
+[
+  {
+    "index": "searchlab-searchlab-fiqa-stemanalyzer",
+    "key": "searchlab-fiqa-stemanalyzer",
+    "label": "searchlab-fiqa-stemanalyzer",
+    "createdAt": "2026-07-16T12:00:08.450156+00:00",
+    "schemaSource": "uploaded"
+  },
+  {
+    "index": "searchlab-fiqa-stemanalyzer",
+    "key": "fiqa-stemanalyzer",
+    "label": "fiqa-stemanalyzer",
+    "createdAt": "2026-07-16T12:00:31.810696+00:00",
+    "schemaSource": "uploaded"
+  }
+]

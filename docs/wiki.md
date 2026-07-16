@@ -686,12 +686,31 @@ that caused it, instead of eyeballing two separate JSON files or Metrics-tab loa
     or there's no match — additive only, same as the highlight/document-fetch degrade-gracefully
     convention. RAG rows have neither qrels nor a per-document retrieved list, so no
     cross-reference marking applies to them.
+14. `/api/eval/compare` also returns `aggregate_a`/`aggregate_b`/`aggregate_delta` — one entry
+    per shared measure, read straight from each run's own top-level `aggregate` dict in
+    `ir_scores.json`/`rag_scores.json` (the same numbers the single-run Metrics tab shows), with
+    `aggregate_delta = b - a` matching every other delta in this feature. No new endpoint. The
+    Compare tab renders this as a summary block (measure / A / B / Δ) above the per-query table,
+    colored with the same convention as per-query Δ cells; it always shows every shared measure
+    regardless of the per-query **Metric** dropdown (item 8) — that dropdown narrows a 50+ row
+    table for scannability, which this single compact row doesn't need. Next to that dropdown, an
+    **All / Improved in B / Regressed in B** toggle filters the per-query table's rows (display
+    only — no re-fetch, no change to sort order) by the delta of whichever measure the Metric
+    dropdown currently selects, falling back to the type's primary measure (`ndcg_cut_10` for IR,
+    `faithfulness` for RAG) when that dropdown is on "All metrics". It reuses the existing
+    `|delta| < 0.01` grey-zone threshold from the Δ-cell coloring (`deltaCls`) rather than a second
+    constant: `> 0.01` is "Improved in B", `< -0.01` is "Regressed in B", the grey zone and rows
+    missing a comparable delta show only under "All". Switching the Metric dropdown while a filter
+    is active re-evaluates it against the newly selected measure. The only-in-A/only-in-B sections
+    have no Run A/B delta to judge and are unaffected in every filter state.
 
 **Classes/functions involved:** `compare_ir`, `compare_rag`, `load_ir_scores`,
 `load_rag_scores`, `load_rag_results`, `load_raw_results`, `load_document`, `load_qrels`,
 `_load_queries` (all in `web/compare.py`); `highlight_document` (in `search/bm25_searcher.py`);
 `ensureJudgementLoaded`, `sourceRank`, `retrievedMark`, `judgedMark` (client-side cross-reference
-helpers in `web/html.py`, item 13 — no backend counterpart)
+helpers in `web/html.py`, item 13 — no backend counterpart); `renderCompareAggregate`,
+`passesRowFilter`, `activeFilterMetric` (client-side aggregate block and row filter, item 14 — no
+backend counterpart beyond the additive `aggregate_*` fields)
 
 **External services:** mostly none — reads only the JSON files `searchlab-eval` already wrote
 under `searchlab-eval/results/<run_id>/`, plus the static `queries.jsonl`/`corpus.jsonl`/
@@ -1143,6 +1162,9 @@ GET /api/eval/compare?type=ir&runA=nfcorpus-20260619T200023Z&runB=nfcorpus-20260
   "run_b": "nfcorpus-20260623T002234Z",
   "dataset": "nfcorpus",
   "measures": ["ndcg_cut_10", "recall_10", "..."],
+  "aggregate_a": {"ndcg_cut_10": 0.42, "recall_10": 0.55},
+  "aggregate_b": {"ndcg_cut_10": 0.47, "recall_10": 0.55},
+  "aggregate_delta": {"ndcg_cut_10": 0.05, "recall_10": 0.0},
   "rows": [
     {
       "query_id": "PLAIN-2",
@@ -1161,6 +1183,13 @@ GET /api/eval/compare?type=ir&runA=nfcorpus-20260619T200023Z&runB=nfcorpus-20260
 
 `query_text` is looked up from `searchlab-eval/data/<dataset>/queries.jsonl` and is `null` if
 that file is missing (the comparison still succeeds).
+
+`aggregate_a`/`aggregate_b` are each run's own top-level `aggregate` dict from
+`ir_scores.json`/`rag_scores.json`, narrowed to the shared `measures`; `aggregate_delta` is
+`b - a` per measure, same convention as every per-row `delta`. This is what the Compare tab's
+summary block renders, and also what the improved/regressed row filter falls back to
+(`ndcg_cut_10` for IR, `faithfulness` for RAG) when the per-query Metric dropdown is on "All
+metrics".
 
 **Response (success, RAG):** same shape, but rows are keyed by list position (`index`) with
 `content_a` / `content_b` (`question`/`answer`/`contexts`/`ground_truth`) instead of

@@ -130,6 +130,9 @@ def compare_ir(run_a: str, run_b: str) -> dict:
     scores_b = load_ir_scores(run_b)
     dataset = _check_same_dataset(run_a, run_b, scores_a, scores_b)
     measures = _shared_measures(scores_a, scores_b)
+    aggregate_a = _metric_subset(scores_a.get("aggregate", {}), measures)
+    aggregate_b = _metric_subset(scores_b.get("aggregate", {}), measures)
+    aggregate_delta = _delta(aggregate_a, aggregate_b, measures)
 
     pq_a = scores_a.get("per_query", {})
     pq_b = scores_b.get("per_query", {})
@@ -181,6 +184,9 @@ def compare_ir(run_a: str, run_b: str) -> dict:
         "run_b": run_b,
         "dataset": dataset,
         "measures": measures,
+        "aggregate_a": aggregate_a,
+        "aggregate_b": aggregate_b,
+        "aggregate_delta": aggregate_delta,
         "rows": rows,
         "only_in_a": only_in_a,
         "only_in_b": only_in_b,
@@ -192,6 +198,9 @@ def compare_rag(run_a: str, run_b: str) -> dict:
     scores_b = load_rag_scores(run_b)
     dataset = _check_same_dataset(run_a, run_b, scores_a, scores_b)
     measures = _shared_measures(scores_a, scores_b)
+    aggregate_a = _metric_subset(scores_a.get("aggregate", {}), measures)
+    aggregate_b = _metric_subset(scores_b.get("aggregate", {}), measures)
+    aggregate_delta = _delta(aggregate_a, aggregate_b, measures)
 
     pq_a = scores_a.get("per_query", {})
     pq_b = scores_b.get("per_query", {})
@@ -252,6 +261,9 @@ def compare_rag(run_a: str, run_b: str) -> dict:
         "run_b": run_b,
         "dataset": dataset,
         "measures": measures,
+        "aggregate_a": aggregate_a,
+        "aggregate_b": aggregate_b,
+        "aggregate_delta": aggregate_delta,
         "rows": rows,
         "only_in_a": only_in_a,
         "only_in_b": only_in_b,

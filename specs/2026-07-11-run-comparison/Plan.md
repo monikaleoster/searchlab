@@ -427,6 +427,70 @@ branch lines 1140–1176)
 
 ---
 
+## Group 13 — Amendment 6: Aggregate Metrics Comparison & Improved/Regressed Filter (2026-07-16)
+
+Extends Group 1 (backend response shape), Group 4 (comparison table), and Group 8.1 (metric
+filter). No new endpoint — `aggregate` already exists in `ir_scores.json`/`rag_scores.json`
+(Group 1.4/1.5 already load these files in full); this group only extracts and exposes it, plus
+adds a client-side row filter alongside the existing metric-column filter.
+
+### 13.1 Backend: aggregate delta
+
+**Where:** `service/searchlab/web/compare.py`
+
+- In `compare_ir` and `compare_rag`, after computing `measures` (the shared-measure
+  intersection), extract `aggregate_a = _metric_subset(scores_a.get("aggregate", {}), measures)`
+  and `aggregate_b = _metric_subset(scores_b.get("aggregate", {}), measures)` — reusing the
+  existing `_metric_subset` helper (already used for per-row `a`/`b`). Compute
+  `aggregate_delta = _delta(aggregate_a, aggregate_b, measures)`, reusing the existing `_delta`
+  helper unchanged.
+- Add `aggregate_a`, `aggregate_b`, `aggregate_delta` to the dict returned by both functions,
+  alongside the existing `run_a`, `run_b`, `dataset`, `measures`, `rows`, `only_in_a`,
+  `only_in_b` keys.
+
+### 13.2 Frontend: aggregate summary block
+
+**Where:** `service/searchlab/web/html.py`
+
+- Add a summary block rendered above the per-query table once `cmpData` is populated: one row
+  per shared measure showing `measure | A | B | Δ`, using the same `deltaCls` coloring helper
+  already used for per-query Δ cells (Plan 4.2) so the color language is identical.
+- Always renders **all** measures in `cmpData.measures`, independent of the per-query
+  metric-column `<select>` (Group 8.1) — that control only narrows the per-query table's
+  columns, not this block.
+- Re-rendered whenever a new comparison response loads. Not affected by row sort or by the
+  improved/regressed filter (13.3), since it summarizes the whole run pair, not a row subset.
+
+### 13.3 Frontend: improved/regressed filter toggle
+
+**Where:** `service/searchlab/web/html.py`
+
+- Add a three-way toggle ("All" / "Improved in B" / "Regressed in B") next to the existing
+  metric-column `<select>` (Group 8.1), disabled until a comparison has been run, defaulting to
+  "All".
+- Compute the "active filter metric" on each render: the metric-column dropdown's current value
+  if it's not "All metrics", else the type's primary measure (`ndcg_cut_10` for IR,
+  `faithfulness` for RAG — the same constant Group 4.3's default-sort logic already uses).
+- Filtering predicate applied to the main table's row list before rendering (not a re-fetch, not
+  a re-sort): for each row, read `row.delta[activeMetric]`.
+  - Missing (metric not comparable for that row) → excluded from both "Improved in B" and
+    "Regressed in B"; still shown under "All".
+  - `> 0.01` → shown under "Improved in B".
+  - `< -0.01` → shown under "Regressed in B".
+  - Otherwise (grey zone) → excluded from both filtered views, same as "missing".
+  - Reuse the existing grey-zone numeric constant from Group 4.2's delta-coloring logic rather
+    than duplicating the literal `0.01` in a second place.
+- Changing the metric-column dropdown while a non-"All" filter is active re-runs the filter
+  against the newly active metric (no separate "apply" step).
+- The only-in-A/only-in-B sections (Group 4.4) are unaffected by this toggle in every state —
+  they render identically regardless of filter selection.
+
+### 13.4 Definition of Done additions
+
+See updated Definition of Done below.
+
+---
+
 ## Definition of Done
 
 - [ ] `GET /api/eval/compare` works for both `type=ir` and `type=rag`
@@ -471,3 +535,11 @@ branch lines 1140–1176)
       with which run(s) retrieved it and at what rank, using data already on hand (no new fetch)
 - [ ] No new endpoint or response-shape change for Amendment 5; RAG rows show no cross-reference
       marking
+- [ ] `/api/eval/compare` includes `aggregate_a`/`aggregate_b`/`aggregate_delta` for both `type=ir`
+      and `type=rag`, matching each run's own `aggregate` dict in `ir_scores.json`/`rag_scores.json`
+- [ ] Compare tab shows an aggregate summary block above the per-query table, always showing all
+      shared measures regardless of the per-query metric-column filter's selection
+- [ ] "All / Improved in B / Regressed in B" toggle correctly filters main-table rows by the
+      active metric's delta (metric-dropdown selection, or the type's primary measure when on
+      "All metrics"), using the existing grey-zone threshold; only-in-A/only-in-B sections are
+      unaffected in every filter state; switching the metric dropdown re-evaluates an active filter
