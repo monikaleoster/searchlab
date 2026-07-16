@@ -25,7 +25,7 @@ def search(client: OpenSearch, question: str, top_k: int, index: str) -> list[Se
         body={"query": _chunk_text_match(question), "size": top_k},
     )
     hits = []
-        for rank, hit in enumerate(resp["hits"]["hits"], start=1):
+    for rank, hit in enumerate(resp["hits"]["hits"], start=1):
         src = hit.get("_source", {})
         text = src.get("chunk_text", "")
         hits.append(

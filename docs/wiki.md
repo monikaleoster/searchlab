@@ -121,10 +121,11 @@ searchlab/
 │       ├── main.py             # FastAPI app factory
 │       ├── cli.py              # Click CLI (searchlab command)
 │       ├── ingest/             # PDF parsing, chunking, OpenSearch indexing
-│       ├── opensearch/         # Client factory + index bootstrap
+│       ├── opensearch/         # Client factory + index bootstrap + index admin/registry
 │       ├── search/             # BM25 retrieval
 │       ├── rag/                # LLM context building + OpenAI calls
-│       └── web/                # HTTP routes + HTML template
+│       ├── web/                # HTTP routes + HTML template
+│       └── data/               # index_registry.json (git-ignored, created lazily)
 │   └── tests/                  # Unit and integration tests
 │
 ├── searchlab-eval/             # Standalone eval harness
@@ -152,7 +153,8 @@ searchlab/
 | Folder | Purpose | What belongs here | What does NOT belong here |
 |---|---|---|---|
 | `service/searchlab/ingest/` | PDF-to-OpenSearch pipeline | Parsing, chunking, bulk indexing | Search logic, API routes |
-| `service/searchlab/opensearch/` | OpenSearch connection + index management | Client factory, index mapping | Business logic, query building |
+| `service/searchlab/opensearch/` | OpenSearch connection + index management | Client factory, index mapping, index create/list (`index_admin.py`), created-index registry (`index_registry.py`) | Business logic, query building |
+| `service/searchlab/data/` | Runtime state (git-ignored) | `index_registry.json` | Source code |
 | `service/searchlab/search/` | Retrieval logic | BM25 query execution, result mapping | LLM calls, ingestion |
 | `service/searchlab/rag/` | Answer generation | Context building, LLM client, orchestration | OpenSearch queries, routes |
 | `service/searchlab/web/` | HTTP layer | FastAPI routes, HTML template | Business logic |
@@ -232,22 +234,29 @@ searchlab/
 
 **Purpose:** Manage the OpenSearch connection and index lifecycle.
 
-**Modules:** `opensearch/client.py`, `opensearch/index_bootstrap.py`
+**Modules:** `opensearch/client.py`, `opensearch/index_bootstrap.py`, `opensearch/index_admin.py`, `opensearch/index_registry.py`
 
 **Responsibilities:**
 - Create the `opensearch-py` client from config
-- Idempotently create the index with the correct field mapping
+- Idempotently create the default/BEIR index with the fixed field mapping
+- Create and list user-defined indexes from an uploaded raw schema (Indexes tab, see §4.7)
+- Persist metadata about indexes created that way, in a small file-backed registry
 
 **Key functions:**
 
 | Function | File | Role |
 |---|---|---|
 | `create_client(url)` | `client.py` | Returns configured `OpenSearch` instance |
-| `ensure_index_exists(client, index)` | `index_bootstrap.py` | Creates index only if absent |
+| `ensure_index_exists(client, index)` | `index_bootstrap.py` | Creates index only if absent, using the fixed `INDEX_MAPPING` |
+| `validate_key(key)` | `index_admin.py` | Raises `ValueError` for empty/malformed/reserved index keys |
+| `create_index(client, key, schema_body)` | `index_admin.py` | Validates, rejects duplicates, calls `indices.create()` with the uploaded body verbatim; returns `searchlab-<key>` |
+| `list_indexes(client)` | `index_admin.py` | `cat.indices("searchlab-*")` merged with registry metadata (label/schema source/created-at) |
+| `load_registry()` / `save_entry(entry)` | `index_registry.py` | Read/append `service/searchlab/data/index_registry.json` (`[]` if missing — normal first-run state) |
+| `find_by_key(key)` / `find_by_index(index)` / `key_exists(key)` | `index_registry.py` | Lookups used by `_resolve_index` and `list_indexes` |
 
-**Index mapping fields:** `chunk_text` (text, standard analyzer), `chunk_id` (keyword), `source_filename` (keyword), `page_number` (integer), `chunk_position` (integer), `ingested_at` (date).
+**Index mapping fields (default/BEIR index):** `chunk_text` (text, standard analyzer), `chunk_id` (keyword), `source_filename` (keyword), `page_number` (integer), `chunk_position` (integer), `ingested_at` (date). A custom index created via the Indexes tab uses whatever mapping the user uploaded instead — ingest still writes this same fixed field set into it regardless (see §4.7 caveat).
 
-**Common change areas:** Modifying the index mapping — update `INDEX_MAPPING` in `index_bootstrap.py` (note: existing indexes must be re-created manually after a mapping change).
+**Common change areas:** Modifying the default index mapping — update `INDEX_MAPPING` in `index_bootstrap.py` (note: existing indexes must be re-created manually after a mapping change). Custom-index validation rules (name pattern, reserved keys) live in `index_admin._NAME_RE` / `_RESERVED_KEYS`.
 
 ---
 
@@ -337,8 +346,10 @@ the change automatically).
 | `compare_ir(run_a, run_b)` | Merges two `ir_scores.json` runs by `query_id` |
 | `compare_rag(run_a, run_b)` | Merges two `rag_scores.json`/`rag_results.json` runs by list position |
 | `eval_highlight` route | Calls `highlight_document()` (`search/bm25_searcher.py`) for live IR match highlighting |
+| `_resolve_index(dataset, default_index)` | Resolves a UI dataset key to a full index name: hardcoded `DATASET_INDEX` → index registry (`index_registry.find_by_key`) → default index fallback |
+| `api_list_indexes` / `api_create_index` / `api_datasets` routes | `GET/POST /api/indexes`, `GET /api/datasets` — thin wrappers around `opensearch/index_admin.py` and `opensearch/index_registry.py` (see §4.7, §7) |
 
-**Common change areas:** Adding a new route — add a handler in `routes.py` and connect it to the UI in `html.py`. Comparison merge logic lives entirely in `compare.py`, independent of the route/HTML layers.
+**Common change areas:** Adding a new route — add a handler in `routes.py` and connect it to the UI in `html.py`. Comparison merge logic lives entirely in `compare.py`, independent of the route/HTML layers. Index create/list logic lives entirely in `opensearch/index_admin.py`, same pattern.
 
 ---
 
@@ -513,6 +524,21 @@ sequenceDiagram
 3. `query`: Iterates all queries, POSTs to `/api/query`, writes `raw_results.json`.
 4. `metrics ir`: Loads `raw_results.json` + `qrels/test.tsv`, computes metrics with pytrec_eval, writes `ir_scores.json`.
 
+**Index-target override (independent of the BEIR dataset picker):** The Eval tab's `ingest`/
+`query` steps normally target `searchlab-<dataset>`. The Eval tab's **Index Override** selector
+(sourced from `GET /api/indexes` — built-in + custom indexes, same list the Indexes tab shows,
+§4.7) lets a user redirect both steps at a specific index instead — e.g. to ingest `nfcorpus`'s
+corpus into a custom-schema index created via the Indexes tab, then query and score against it.
+Left blank (`"Default for dataset"`), behavior is unchanged. When set: `runEvalOp()` appends
+`&index=<index>` to `GET /api/eval/stream` for `ingest`/`query` only (not `download`, `metrics`,
+or `ragas`, which have no index concept); `_build_eval_command()` appends `--index <index>` to the
+underlying CLI command; `cli.py`'s `ingest --index` and `query --index` options use it verbatim
+instead of computing `searchlab-<dataset>`; `query --index` also makes `run_query`/`run_queries`
+POST `index=<index>` to `/api/query` instead of `dataset=<dataset>`, which makes the route skip
+`_resolve_index` entirely (§3.6) and search that index directly. `metrics ir` is unaffected either
+way — it matches on `doc_id` against the dataset's local `qrels/test.tsv`, which doesn't depend on
+which index stored the documents.
+
 ```mermaid
 sequenceDiagram
     actor User
@@ -673,6 +699,58 @@ under `searchlab-eval/results/<run_id>/`, plus the static `queries.jsonl`/`corpu
 exception is item 12: expanding an IR `doc_id` issues a live, read-only OpenSearch query for
 highlighting, same as the Query tab's live searches. Item 13 adds no new network calls beyond the
 existing document/qrels fetches.
+
+---
+
+### 4.7 Index Management (Indexes tab)
+
+**Goal:** View every `searchlab-*` OpenSearch index with its live document count, and create a new
+one from an uploaded raw index-creation body — without needing `curl`/Postman against OpenSearch
+directly.
+
+**View existing indexes:**
+1. Open the **Indexes** tab → `loadIndexes()` calls `GET /api/indexes`.
+2. `index_admin.list_indexes()` calls `client.cat.indices(index="searchlab-*", ...)` for live doc
+   counts, then merges in `label`/`schemaSource`/`createdAt` from the registry
+   (`index_registry.find_by_index`) for indexes created through this feature. Pre-existing indexes
+   (`searchlab-v0`, `searchlab-nfcorpus`, `searchlab-fiqa`) still show, just with
+   `schemaSource: "pre-existing"` and no extra metadata.
+
+**Create a new index:**
+1. Enter a name (e.g. `my-index`) and choose a JSON file containing a literal OpenSearch
+   create-index body — `{"settings": {...}, "mappings": {...}}` — no simplified schema DSL, applied
+   as-is.
+2. `createIndex()` posts both as `multipart/form-data` to `POST /api/indexes` (the browser sets the
+   multipart boundary itself — no manual `Content-Type`).
+3. `index_admin.create_index()` validates the name (`validate_key` — lowercase letters/digits/
+   hyphens, not a reserved key like `default`/`nfcorpus`/`fiqa`), rejects a name that already exists
+   in OpenSearch or the registry, then calls `client.indices.create()`. Only after that succeeds does
+   the route write a registry entry (`index_registry.save_entry`) — so a failed create never leaves
+   a partially-tracked index.
+4. On success, both the index table and the RAG/Query/Ingest dataset dropdowns
+   (`loadDatasets()` → `GET /api/datasets`) refresh immediately — no restart needed.
+
+**Naming convention:** a name `foo` typed in the form becomes OpenSearch index `searchlab-foo`,
+consistent with `searchlab-nfcorpus`/`searchlab-fiqa`/`searchlab-v0`.
+
+**Caveat — ingest still writes its fixed shape:** `index_chunks`/`index_corpus_docs`
+(`ingest/indexer.py`) are unchanged by this feature. Ingesting into a custom-schema index still
+writes the same fixed fields it always has (`chunk_text`, `chunk_id`, `source_filename`,
+`page_number`, `chunk_position`, `ingested_at`). A custom schema's practical effect is limited to
+whatever it does to those same field names (e.g. a custom analyzer on `chunk_text`); a schema
+expecting different field names entirely will get an index whose custom fields stay empty.
+
+**Out of reach, not just deferred:** the **Eval**, **Metrics**, and **Compare** tabs' *dataset*
+pickers are unchanged and do not offer custom indexes — those tabs need local
+`queries.jsonl`/`corpus.jsonl`/`qrels/test.tsv` files a custom index doesn't have. This is
+narrower than it sounds: the Eval tab separately gains an *index-target override* for its
+Ingest/Query steps, independent of the dataset picker — see §4.4's "Index-target override".
+
+**Classes/functions involved:** `index_admin.validate_key/create_index/list_indexes`,
+`index_registry.load_registry/save_entry/find_by_key/find_by_index/key_exists`,
+`routes._resolve_index`, `api_list_indexes`/`api_create_index`/`api_datasets` (all in
+`web/routes.py`); `loadIndexes`/`createIndex`/`loadDatasets`/`populateDatasetSelect` (client-side,
+`web/html.py`).
 
 ---
 
@@ -880,7 +958,13 @@ Content-Type: application/x-www-form-urlencoded
 query   = "sepsis treatment"
 topK    = 10
 dataset = "nfcorpus"
+index   = ""            # optional — see below
 ```
+
+`index`, when non-empty, is used verbatim as the target index and `_resolve_index(dataset)` is
+skipped entirely; this is what `searchlab-eval query --index` (§4.4) uses to search a specific
+index instead of the dataset-derived one. Left empty (the default), behavior is unchanged —
+`dataset` resolves via `_resolve_index()` as before.
 
 **Service called:** `search()` in `search/bm25_searcher.py`
 
@@ -907,16 +991,17 @@ dataset = "nfcorpus"
 
 ### `POST /api/ingest`
 
-**Purpose:** Ingest a PDF file into the default index.
+**Purpose:** Ingest a PDF file into the selected dataset's index (defaults to the default index).
 
 **Request:**
 ```
 Content-Type: application/x-www-form-urlencoded
 
 pdfPath = "test-corpus/sample.pdf"
+dataset = "default"   # optional — resolved via _resolve_index()
 ```
 
-**Pipeline called:** `parse_pdf` → `chunk` → `ensure_index_exists` → `index_chunks`
+**Pipeline called:** `parse_pdf` → `chunk` → `_resolve_index(dataset)` → `ensure_index_exists` → `index_chunks`
 
 **Response (success):**
 ```json
@@ -949,14 +1034,82 @@ Content-Type: application/json
 
 ---
 
+### `GET /api/indexes`
+
+**Purpose:** List every `searchlab-*` index with a live document count (Indexes tab).
+
+**Pipeline called:** `index_admin.list_indexes()` — `client.cat.indices()` merged with
+`index_registry.find_by_index()`.
+
+**Response (success):**
+```json
+[
+  {"index": "searchlab-my-index", "label": "my-index", "docCount": 12,
+   "schemaSource": "uploaded", "createdAt": "2026-07-14T00:00:00+00:00"},
+  {"index": "searchlab-v0", "label": "searchlab-v0", "docCount": 2,
+   "schemaSource": "pre-existing", "createdAt": null}
+]
+```
+
+**Response (OpenSearch unreachable):** `502 {"error": "..."}`
+
+---
+
+### `POST /api/indexes`
+
+**Purpose:** Create a new OpenSearch index from an uploaded raw schema JSON (Indexes tab).
+
+**Request:**
+```
+Content-Type: multipart/form-data
+
+name = "my-index"
+schemaFile = <uploaded .json file: {"settings": {...}, "mappings": {...}}>
+```
+
+**Pipeline called:** `index_admin.create_index()` → (on success) `index_registry.save_entry()`.
+
+**Response (success):**
+```json
+{"index": "searchlab-my-index", "key": "my-index"}
+```
+
+**Response (errors, all `400`):** invalid/reserved name, duplicate name/key, invalid JSON in the
+file, or OpenSearch rejecting the mapping/settings — each with a specific `{"error": "..."}`
+message, no partially-created index left behind.
+
+---
+
+### `GET /api/datasets`
+
+**Purpose:** Single source of truth for the RAG/Query/Ingest dataset dropdowns — built-in BEIR
+entries plus every registry entry.
+
+**Response (success):**
+```json
+[
+  {"key": "default", "label": "Default index"},
+  {"key": "nfcorpus", "label": "nfcorpus"},
+  {"key": "fiqa", "label": "FiQA-2018"},
+  {"key": "my-index", "label": "my-index"}
+]
+```
+
+---
+
 ### `GET /api/eval/stream`
 
 **Purpose:** Stream subprocess output from `searchlab-eval` operations as Server-Sent Events.
 
 **Request:**
 ```
-GET /api/eval/stream?op=query&dataset=nfcorpus
+GET /api/eval/stream?op=query&dataset=nfcorpus&index=searchlab-custom
 ```
+
+`index` (optional) is only meaningful for `op=ingest`/`op=query`; when set, it's passed through as
+`--index <index>` to the underlying CLI command (§4.4's "Index-target override"), overriding the
+dataset-derived `searchlab-<dataset>` target. Omitted for `op=download`/`metrics`/`ragas`, or left
+blank for `ingest`/`query`, behavior is unchanged from before this option existed.
 
 **Events (SSE):**
 ```
@@ -1261,17 +1414,19 @@ All configuration is centralized in `service/searchlab/config.py`. Values are re
 
 ### Dataset Index Mapping
 
-The `DATASET_INDEX` dict in `web/routes.py` maps UI dataset names to index names:
+`_resolve_index(dataset, default_index)` in `web/routes.py` resolves a UI dataset key to a full
+index name, checked in this order:
 
-```python
-DATASET_INDEX = {
-    "default":    config.index_name(),   # SEARCHLAB_INDEX
-    "nfcorpus":   "searchlab-nfcorpus",
-    "fiqa":       "searchlab-fiqa",
-}
-```
+1. `dataset == "default"` → `default_index` or `config.index_name()` (`SEARCHLAB_INDEX`).
+2. The hardcoded `DATASET_INDEX` dict — `{"nfcorpus": "searchlab-nfcorpus", "fiqa": "searchlab-fiqa"}`.
+3. The index registry (`index_registry.find_by_key(dataset)`) — custom indexes created via the
+   Indexes tab (§4.7).
+4. Falls back to the default index for any unrecognized `dataset` string (unchanged legacy
+   behavior — no error).
 
-To add a new dataset, update this dict and ensure the dataset has been downloaded and ingested.
+To add a new **built-in** dataset, update `DATASET_INDEX` and ensure the dataset has been
+downloaded and ingested. To add a **custom** dataset/index at runtime, use the Indexes tab — no
+code change needed; it's picked up automatically via step 3 and via `GET /api/datasets` (§7).
 
 ### Local Development Setup
 
@@ -1315,6 +1470,11 @@ There are no code-level feature flags. The presence/absence of `OPENAI_API_KEY` 
 | `test_chunker.py` | Text chunking logic, token boundaries, page attribution |
 | `test_llm_client.py` | LLmClient error handling (timeout, API errors, missing key) |
 | `test_context_builder.py` | Context string formatting from SearchHit lists |
+| `test_bm25_searcher.py` | `highlight_document()` fragment/no-match/not-found cases (fake OpenSearch client) |
+| `test_compare.py` | `compare_ir`/`compare_rag`/`load_document`/`load_qrels` merge logic |
+| `test_index_registry.py` | `index_registry` load/save/find/key_exists round-trips (tmp-path-backed registry file) |
+| `test_index_admin.py` | `index_admin.validate_key/create_index/list_indexes` — success, invalid/duplicate key, OpenSearch rejection propagated |
+| `test_routes.py` | `routes._resolve_index` precedence: hardcoded dict → registry → default fallback; `_build_eval_command`'s `--index` override (ingest/query only); `api_query`'s explicit `index` bypass of `_resolve_index` |
 
 **How to run:**
 
@@ -1353,8 +1513,9 @@ uv run pytest tests/test_chunker.py -v
 |---|---|
 | `test_download.py` | `slice_queries` determinism, edge cases (n=0, n≥total) |
 | `test_ingest.py` | `ingest_corpus` batching, error handling (mock HTTP) |
-| `test_query.py` | `run_query` / `load_queries` / `run_queries` with mock HTTP |
+| `test_query.py` | `run_query` / `load_queries` / `run_queries` with mock HTTP, including the `--index` override (Group 9) |
 | `test_ir_metrics.py` | Metric loading, qrels loading, pytrec format conversion, aggregation |
+| `test_cli.py` | `ingest`/`query` CLI commands' `--index` override vs. default dataset-derived index (mocked `ingest_corpus`/`run_queries`) |
 
 **How to run:**
 

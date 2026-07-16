@@ -70,14 +70,15 @@ def download(dataset: str, slice_n: int) -> None:
 @click.option("--dataset", "-d", required=True, help="BEIR dataset name (e.g. scifact, nfcorpus)")
 @_SEARCHLAB_URL_OPTION
 @_OPENSEARCH_URL_DEPRECATED
-def ingest(dataset: str, searchlab_url: str, opensearch_url: str | None) -> None:
+@click.option("--index", default=None, help="Override target index (defaults to searchlab-<dataset>)")
+def ingest(dataset: str, searchlab_url: str, opensearch_url: str | None, index: str | None) -> None:
     """Ingest a downloaded BEIR corpus via the searchlab service."""
     from searchlab_eval.ingestor import ingest_corpus
 
     if opensearch_url:
         click.echo("Warning: --opensearch-url is deprecated; use --searchlab-url instead", err=True)
 
-    index = f"searchlab-{dataset}"
+    index = index or f"searchlab-{dataset}"
     corpus_path = Path("data") / dataset / "corpus.jsonl"
     if not corpus_path.exists():
         click.echo(f"Error: corpus not found at {corpus_path} — run download first", err=True)
@@ -98,7 +99,15 @@ def ingest(dataset: str, searchlab_url: str, opensearch_url: str | None) -> None
 @_SEARCHLAB_URL_OPTION
 @_OPENSEARCH_URL_DEPRECATED
 @click.option("--run-id", default=None, help="Run identifier (auto-generated if omitted)")
-def query(dataset: str, top_k: int, searchlab_url: str, opensearch_url: str | None, run_id: str | None) -> None:
+@click.option("--index", default=None, help="Override target index (defaults to searchlab-<dataset>)")
+def query(
+    dataset: str,
+    top_k: int,
+    searchlab_url: str,
+    opensearch_url: str | None,
+    run_id: str | None,
+    index: str | None,
+) -> None:
     """Run queries for a downloaded BEIR dataset and write ranked results."""
     from searchlab_eval.querier import load_queries, run_queries
 
@@ -118,7 +127,7 @@ def query(dataset: str, top_k: int, searchlab_url: str, opensearch_url: str | No
     results_dir = Path("results") / run_id
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    results = run_queries(queries, searchlab_url, top_k, dataset=dataset)
+    results = run_queries(queries, searchlab_url, top_k, dataset=dataset, index=index)
 
     payload = {
         "run_id": run_id,

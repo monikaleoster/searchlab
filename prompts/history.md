@@ -245,3 +245,152 @@ inline with its own literal `{"match": {"chunk_text": query}}`. Per the user's e
 mid-session, extracted `_chunk_text_match()` as a shared helper instead, so the two functions
 can't independently drift into scoring/highlighting documents differently if one is edited
 later. No other deviation from Plan.md §11.1–11.3 / Requirements F17–F18.
+
+---
+
+## Session 6 — Index Management (2026-07-14)
+
+**Model:** Claude Sonnet 5
+**Branch:** 2026-07-14-index-management
+
+**Prompt summary:**
+> Implement the remaining task groups in `specs/2026-07-14-index-management/` (requirements.md,
+> Plan.md, Validation.md). Nothing from this spec had been started yet, so all 8 plan groups were
+> "remaining": a new Indexes tab to view every `searchlab-*` index with a live doc count and
+> create a new one from an uploaded raw OpenSearch schema JSON, plus wiring newly-created indexes
+> into the RAG/Query/Ingest dataset dropdowns via a new `GET /api/datasets` endpoint.
+
+**Outcome:**
+- New `opensearch/index_registry.py`: file-backed registry at
+  `service/searchlab/data/index_registry.json` (git-ignored, created lazily). `load_registry`
+  returns `[]` if missing; `save_entry` appends and writes via a temp-file + `os.replace` swap to
+  avoid a torn file; `find_by_key`/`find_by_index`/`key_exists` lookups.
+- New `opensearch/index_admin.py`: `validate_key` (lowercase/digits/hyphens, 1–63 chars, rejects
+  `default`/`nfcorpus`/`fiqa` as reserved so a custom index can't shadow a built-in dataset);
+  `create_index` (validates, rejects a name that already exists in OpenSearch or the registry,
+  calls `indices.create()` with the uploaded body verbatim, does **not** write the registry entry
+  itself — that's the route's job, only after `create_index` returns); `list_indexes` (one
+  `cat.indices("searchlab-*")` call merged with registry metadata, `pre-existing`/`None` for
+  indexes with no registry entry).
+- `web/routes.py`: `GET /api/indexes` (502 on cluster failure), `POST /api/indexes` (multipart
+  `name` + `schemaFile`; distinct 400s for invalid JSON, invalid name, and OpenSearch mapping
+  rejection — the registry entry is written only after `create_index` succeeds), `GET
+  /api/datasets` (merges the hardcoded BEIR entries with every registry entry). Extended
+  `_resolve_index` to check the registry (`find_by_key`) between the hardcoded `DATASET_INDEX`
+  dict and the default-index fallback. `POST /api/ingest` gained a `dataset` form field, resolved
+  through `_resolve_index` instead of always targeting `config.index_name()`.
+- `web/html.py`: new **Indexes** tab (create-index form + existing-indexes table, refresh
+  button), added to the tab bar after Compare. New Ingest-tab dataset `<select>` defaulting to
+  "Default index" (preserves pre-change behavior), wired into `runIngest()`'s POST body.
+  `loadIndexes()`/`createIndex()`/`loadDatasets()`/`populateDatasetSelect()` — the last preserves
+  each dropdown's current selection across a refresh (reads `select.value` before replacing
+  `<option>`s, restores it after if still present) so creating an index elsewhere doesn't reset a
+  user's in-progress RAG/Query/Ingest selection. `loadDatasets()` runs once at page load and again
+  after a successful `createIndex()`.
+- New `tests/test_index_registry.py`, `tests/test_index_admin.py` (hand-written `_FakeClient`
+  stub with `.indices`/`.cat` sub-objects, same convention as `test_bm25_searcher.py`'s
+  `_FakeClient` — not `unittest.mock.Mock`), `tests/test_routes.py` (`_resolve_index` precedence:
+  hardcoded dict wins over registry, registry key resolves, unknown dataset falls back to
+  default, unchanged).
+- Fixed a pre-existing, unrelated `IndentationError` in `search/bm25_searcher.py:28` (present
+  since the "Comparison feature" commit, predating this session) that broke every test's
+  collection; confirmed with the user via `AskUserQuestion` before fixing it, since the whole
+  suite couldn't otherwise run to verify this session's changes.
+- Full suite: 60 passed (36 pre-existing + 24 new).
+- Verified end-to-end against a live OpenSearch: an older `searchlab serve` process on port 8080
+  predated these changes (no new routes) — confirmed via `AskUserQuestion` before killing it and
+  starting a fresh one. `curl`-drove `GET /api/indexes`/`GET /api/datasets` (listed
+  `searchlab-v0`/`-nfcorpus`/`-fiqa` as `pre-existing`), `POST /api/indexes` success + duplicate
+  name/key rejection + invalid JSON + OpenSearch-rejected mapping + invalid name (all distinct
+  400 messages, no stack traces), `POST /api/ingest` with `dataset=my-test-idx` (chunks landed in
+  `searchlab-my-test-idx`, doc count rose, `searchlab-v0` untouched) and with no `dataset`
+  (unchanged default-index behavior), `POST /api/query` against the new custom index. In a real
+  Chrome tab: Indexes tab renders the create form and table correctly; RAG/Query/Ingest dataset
+  dropdowns include the newly-created `my-test-idx` while Eval/Metrics/Compare dropdowns remain
+  BEIR-only (`nfcorpus`/`FiQA-2018`/run lists) with no leakage; submitting the create form with no
+  file selected shows the client-side inline error before any network call. Deleted the test
+  index (`searchlab-my-test-idx`) and cleared the local registry file afterward.
+- `docs/wiki.md` updated: repository structure and directory-purpose table note
+  `opensearch/index_admin.py`/`index_registry.py` and the new `service/searchlab/data/` dir; §3.3
+  documents the new index-admin/registry functions; §3.6's key-symbols table gains
+  `_resolve_index` and the three new routes; new §4.7 "Index Management (Indexes tab)" workflow
+  section (view/create flow, naming convention, the fixed-ingest-shape caveat, and why
+  Eval/Metrics/Compare are structurally out of reach); §7 gained `GET/POST /api/indexes` and `GET
+  /api/datasets` entries and updated `/api/ingest`'s entry for the new `dataset` field; §9's
+  Dataset Index Mapping section rewritten around `_resolve_index`'s actual 4-step precedence;
+  §10's service test-file table brought up to date (it was already missing
+  `test_bm25_searcher.py`/`test_compare.py` from a prior session, plus the three new files added
+  here).
+- `.gitignore`: added `service/searchlab/data/` alongside the existing `searchlab-eval/results`
+  entry, so the registry file is never committed.
+
+**Deviations from plan (with rationale):** None from Plan.md's 8 groups. One out-of-scope fix
+(the pre-existing `bm25_searcher.py` indentation bug) was made only after explicit user
+confirmation, since it blocked all test collection and wasn't otherwise part of this spec.
+
+---
+
+## Session 7 — Index Management Amendment: Eval Ingest/Query Index Override (Group 9) (2026-07-16)
+
+**Model:** Claude Sonnet 5
+**Branch:** 2026-07-14-index-management
+
+**Prompt summary:**
+> Implement the remaining task groups in `specs/2026-07-14-index-management/`. Groups 1–8
+> (Session 6) were already done; the spec had since grown a 9th group — an independent index-target
+> override for the Eval tab's Ingest/Query steps, plus AC18–AC22 and manual-verification step 12 —
+> that hadn't been implemented yet.
+
+**Outcome:**
+- `web/routes.py`: `/api/query` gained an `index` form field; when non-empty it's used verbatim
+  and `_resolve_index(dataset)` is skipped entirely. `_build_eval_command` gained an `index`
+  parameter, appending `--index <index>` to the `ingest`/`query` subcommands only when non-empty
+  (`download`/`metrics`/`ragas` untouched). `/api/eval/stream` gained an `index` query param
+  passed through to `_build_eval_command`.
+- `searchlab-eval/searchlab_eval/cli.py`: `ingest` and `query` commands each gained `--index`
+  (default `None`); when given, used verbatim instead of `f"searchlab-{dataset}"`; when omitted,
+  byte-for-byte the same as before.
+- `searchlab-eval/searchlab_eval/querier.py`: `run_query`/`run_queries` gained an `index` param;
+  when set, POSTs `index=<index>` (and empty `dataset`) to `/api/query` instead of `dataset`;
+  when `None`, POSTs `dataset` exactly as before.
+- `web/html.py`: new `<select id="eval-index">` next to the Eval tab's dataset dropdown,
+  first option "Default for dataset" (no override). `loadEvalIndexOptions()` populates it from
+  `GET /api/indexes` on switching to the Eval tab and after a successful `createIndex()`.
+  `runEvalOp()` appends `&index=<index>` to the `/api/eval/stream` URL for `ingest`/`query` only
+  when the selector is non-blank.
+- Tests: `test_routes.py` gained `_build_eval_command` index-append tests (ingest/query only;
+  download/metrics/ragas unaffected) and `/api/query` tests (explicit `index` bypasses
+  `_resolve_index`; empty `index` preserves dataset-based resolution) run via `asyncio.run()`
+  against the route coroutine directly, since no route in this codebase was previously tested via
+  `TestClient`/`pytest-asyncio`. `test_query.py` gained index-override coverage for
+  `run_query`/`run_queries`; its pre-existing `test_run_queries_continues_on_error` fake needed an
+  `index=None` kwarg added to keep matching `run_query`'s new signature. New `test_cli.py`
+  (`click.testing.CliRunner`, first CLI test file in `searchlab-eval/tests/`) covers `ingest
+  --index`/`query --index` vs. the default dataset-derived path, mocking `ingest_corpus`/
+  `run_queries` since no import in `cli.py` is patchable at module load time (both are imported
+  inside the command function body).
+- Full suite: `service` 68 passed, `searchlab-eval` 31 passed (`-m "not integration"`).
+- Verified end-to-end against a live OpenSearch: an older `searchlab serve` process on port 8080
+  predated this session's routes.py changes — confirmed via `AskUserQuestion` before killing it
+  and starting a fresh one. Created a custom index via `POST /api/indexes`, ran `searchlab-eval
+  ingest --dataset nfcorpus --index <custom>` (3633 docs landed in the custom index,
+  `searchlab-nfcorpus` unaffected), `searchlab-eval query --index <custom>` (323 queries →
+  `raw_results.json`), `searchlab-eval metrics ir` against that run (scored normally — nDCG/MAP/
+  Recall reported, matching is by `doc_id` against local qrels regardless of index), a direct
+  `curl POST /api/query` with `index=<custom>` (response's `index` field matched), and confirmed
+  the `#eval-index` selector is present in the served HTML. Re-ran `ingest`/`query` with `--index`
+  omitted and confirmed the corpus landed back in `searchlab-nfcorpus` (AC21). Deleted the test
+  index and its `raw_results.json`/registry entry afterward.
+- `docs/wiki.md` updated: §4.4 gained an "Index-target override" subsection describing the
+  Eval tab's new selector and how it threads through `runEvalOp` → `/api/eval/stream` →
+  `_build_eval_command` → `cli.py --index` → `querier.py`; §4.7 cross-references it; `POST
+  /api/query` and `GET /api/eval/stream` route docs (§7) document the new `index` parameter;
+  §10's service and eval test-file tables updated for the new/changed test coverage.
+- `Plan.md`'s Definition of Done and `Validation.md`'s Merge Checklist (AC1–AC22, manual steps
+  1–12) marked complete.
+
+**Deviations from plan (with rationale):** None. `querier.py`'s `run_query` sends both `index`
+and `dataset` fields on every call (empty string for whichever is not in effect) rather than
+conditionally omitting one — functionally identical to the spec's "instead of" wording since
+`api_query` treats an empty `index` as absent, and simpler than building the request body
+conditionally.

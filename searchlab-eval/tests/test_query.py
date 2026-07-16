@@ -81,7 +81,7 @@ def test_load_queries_content(tmp_path):
 def test_run_queries_continues_on_error():
     queries = {"q1": "first query", "q2": "second query"}
 
-    def fake_run_query(text, url, top_k, dataset):
+    def fake_run_query(text, url, top_k, dataset, index=None):
         if text == "first query":
             raise RuntimeError("connection failed")
         return [{"doc_id": "doc-1", "score": 0.9, "rank": 1}]
@@ -91,6 +91,34 @@ def test_run_queries_continues_on_error():
 
     assert results["q1"] == []
     assert results["q2"] == [{"doc_id": "doc-1", "score": 0.9, "rank": 1}]
+
+
+# ── index override (Group 9) ─────────────────────────────────────────
+
+def test_run_query_without_index_posts_dataset():
+    with patch("requests.post", return_value=_make_hits_response([])) as mock_post:
+        run_query("test query", "http://localhost:8080", 10, "nfcorpus")
+
+    posted = mock_post.call_args.kwargs["data"]
+    assert posted["dataset"] == "nfcorpus"
+    assert posted["index"] == ""
+
+
+def test_run_query_with_index_overrides_dataset():
+    with patch("requests.post", return_value=_make_hits_response([])) as mock_post:
+        run_query("test query", "http://localhost:8080", 10, "nfcorpus", index="searchlab-custom")
+
+    posted = mock_post.call_args.kwargs["data"]
+    assert posted["index"] == "searchlab-custom"
+    assert posted["dataset"] == ""
+
+
+def test_run_queries_passes_index_through():
+    queries = {"q1": "first query"}
+    with patch("searchlab_eval.querier.run_query", return_value=[]) as mock_run_query:
+        run_queries(queries, "http://localhost:8080", 10, dataset="nfcorpus", index="searchlab-custom")
+
+    mock_run_query.assert_called_once_with("first query", "http://localhost:8080", 10, "nfcorpus", index="searchlab-custom")
 
 
 @pytest.mark.integration

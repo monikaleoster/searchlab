@@ -1,9 +1,11 @@
 import asyncio
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Form, Query, Body
+from fastapi import APIRouter, Form, Query, Body, File, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from opensearchpy.exceptions import OpenSearchException
 
 from .. import config
 from ..ingest.pdf_parser import parse_pdf
@@ -11,6 +13,7 @@ from ..ingest.chunker import chunk
 from ..ingest.indexer import index_chunks, index_corpus_docs
 from ..opensearch.client import create_client
 from ..opensearch.index_bootstrap import ensure_index_exists
+from ..opensearch import index_admin, index_registry
 from ..search.bm25_searcher import highlight_document, search as bm25_search
 from ..rag import run_rag
 from .compare import compare_ir, compare_rag, load_document, load_qrels
@@ -33,7 +36,12 @@ _RESULTS_DIR = _EVAL_DIR / "results"
 def _resolve_index(dataset: str, default_index: str | None = None) -> str:
     if dataset == "default":
         return default_index or config.index_name()
-    return DATASET_INDEX.get(dataset, config.index_name())
+    if dataset in DATASET_INDEX:
+        return DATASET_INDEX[dataset]
+    entry = index_registry.find_by_key(dataset)
+    if entry:
+        return entry["index"]
+    return default_index or config.index_name()
 
 
 # ── HTML UI ───────────────────────────────────────────────────────────
@@ -81,10 +89,11 @@ async def api_query(
     query: str = Form(""),
     topK: int = Form(5),
     dataset: str = Form("nfcorpus"),
+    index: str = Form(""),
 ):
     if not query.strip():
         return {"error": "Query cannot be empty."}
-    index = _resolve_index(dataset)
+    index = index.strip() or _resolve_index(dataset)
     try:
         client = create_client()
         hits = bm25_search(client, query.strip(), topK, index)
@@ -109,7 +118,7 @@ async def api_query(
 # ── PDF Ingest ───────────────────────────────────────────────────────
 
 @router.post("/api/ingest")
-async def api_ingest(pdfPath: str = Form("")):
+async def api_ingest(pdfPath: str = Form(""), dataset: str = Form("default")):
     path = pdfPath.strip()
     if not path:
         return {"error": "PDF path is required."}
@@ -124,7 +133,7 @@ async def api_ingest(pdfPath: str = Form("")):
 
     try:
         client = create_client()
-        index = config.index_name()
+        index = _resolve_index(dataset)
         ensure_index_exists(client, index)
         pages = parse_pdf(p)
         chunks = chunk(pages)
@@ -150,9 +159,64 @@ async def api_corpus_ingest(
         return {"error": str(e)}
 
 
+# ── Index Management ─────────────────────────────────────────────────
+
+@router.get("/api/indexes")
+async def api_list_indexes():
+    try:
+        client = create_client()
+        return index_admin.list_indexes(client)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+
+
+@router.post("/api/indexes")
+async def api_create_index(
+    name: str = Form(""),
+    schemaFile: UploadFile = File(...),
+):
+    key = name.strip()
+    raw = await schemaFile.read()
+    try:
+        schema_body = json.loads(raw)
+    except json.JSONDecodeError as e:
+        return JSONResponse({"error": f"Invalid JSON in schema file: {e}"}, status_code=400)
+
+    try:
+        client = create_client()
+        full_name = index_admin.create_index(client, key, schema_body)
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except OpenSearchException as e:
+        return JSONResponse({"error": f"OpenSearch rejected the schema: {e}"}, status_code=400)
+
+    index_registry.save_entry({
+        "index": full_name,
+        "key": key,
+        "label": key,
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+        "schemaSource": "uploaded",
+    })
+    return {"index": full_name, "key": key}
+
+
+@router.get("/api/datasets")
+async def api_datasets():
+    builtin = [
+        {"key": "default", "label": "Default index"},
+        {"key": "nfcorpus", "label": "nfcorpus"},
+        {"key": "fiqa", "label": "FiQA-2018"},
+    ]
+    custom = [
+        {"key": e["key"], "label": e["label"]}
+        for e in index_registry.load_registry()
+    ]
+    return builtin + custom
+
+
 # ── Eval SSE Stream ──────────────────────────────────────────────────
 
-def _build_eval_command(op: str, dataset: str, slice_val: str = "", run_id: str = "") -> list[str]:
+def _build_eval_command(op: str, dataset: str, slice_val: str = "", run_id: str = "", index: str = "") -> list[str]:
     match op:
         case "download":
             cmd = ["uv", "run", "searchlab-eval", "download", "--dataset", dataset]
@@ -160,8 +224,12 @@ def _build_eval_command(op: str, dataset: str, slice_val: str = "", run_id: str 
                 cmd += ["--slice", slice_val]
         case "ingest":
             cmd = ["uv", "run", "searchlab-eval", "ingest", "--dataset", dataset]
+            if index:
+                cmd += ["--index", index]
         case "query":
             cmd = ["uv", "run", "searchlab-eval", "query", "--dataset", dataset]
+            if index:
+                cmd += ["--index", index]
         case "metrics":
             if not run_id:
                 raise ValueError("runId is required for metrics")
@@ -181,10 +249,11 @@ async def eval_stream(
     dataset: str = Query("nfcorpus"),
     slice: str = Query(""),
     runId: str = Query(""),
+    index: str = Query(""),
 ):
     async def generator():
         try:
-            cmd = _build_eval_command(op, dataset, slice, runId)
+            cmd = _build_eval_command(op, dataset, slice, runId, index)
         except ValueError as e:
             yield f"event: error\ndata: Bad request: {e}\n\n"
             return
