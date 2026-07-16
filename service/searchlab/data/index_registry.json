@@ -12,5 +12,12 @@
     "label": "fiqa-stemanalyzer",
     "createdAt": "2026-07-16T12:00:31.810696+00:00",
     "schemaSource": "uploaded"
+  },
+  {
+    "index": "searchlab-fiqa-shingles",
+    "key": "fiqa-shingles",
+    "label": "fiqa-shingles",
+    "createdAt": "2026-07-16T18:20:56.070032+00:00",
+    "schemaSource": "uploaded"
   }
 ]
