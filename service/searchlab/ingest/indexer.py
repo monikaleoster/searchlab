@@ -35,7 +35,8 @@ def index_corpus_docs(client: OpenSearch, docs: list[dict], index: str) -> int:
             "_id": doc["_id"],
             "_source": {
                 "chunk_id": doc["_id"],
-                "chunk_text": doc["title"] + " " + doc["text"],
+                "title":  doc["title"],
+                "chunk_text": doc["text"],
                 "source_filename": doc["_id"],
                 "page_number": 0,
                 "chunk_position": 0,

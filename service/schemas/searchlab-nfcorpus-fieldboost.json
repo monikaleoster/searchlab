@@ -1,0 +1,83 @@
+{
+  "mappings": {
+    "properties": {
+      "chunk_id": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "chunk_position": {
+        "type": "long"
+      },
+      "chunk_text": {
+        "type": "text",
+        "analyzer": "my_stemmer_analyzer",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "title": {
+        "type": "text",
+        "analyzer": "my_stemmer_analyzer",
+        "boost": 2,
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      },
+      "ingested_at": {
+        "type": "date"
+      },
+      "page_number": {
+        "type": "long"
+      },
+      "source_filename": {
+        "type": "text",
+        "fields": {
+          "keyword": {
+            "type": "keyword",
+            "ignore_above": 256
+          }
+        }
+      }
+    }
+  },
+  "settings": {
+    "index": {
+      "replication": {
+        "type": "DOCUMENT"
+      },
+      "number_of_shards": "1",
+      "analysis": {
+        "filter": {
+          "my_shingle_filter": {
+            "max_shingle_size": "2",
+            "min_shingle_size": "2",
+            "output_unigrams": "true",
+            "type": "shingle"
+          }
+        },
+        "analyzer": {
+          "my_stemmer_analyzer": {
+            "filter": [
+              "lowercase",
+              "porter_stem",
+              "my_shingle_filter"
+            ],
+            "type": "custom",
+            "tokenizer": "standard"
+          }
+        }
+      }
+    }
+  }
+}

@@ -13,16 +13,21 @@ class SearchHit:
     snippet: str
 
 
-def _chunk_text_match(text: str) -> dict:
+def query_match(text: str) -> dict:
     """The one place `chunk_text` matching is defined, so search() and
     highlight_document() can't quietly drift into scoring documents differently."""
-    return {"match": {"chunk_text": text}}
+    return {
+        "multi_match": {
+            "query": text,
+            "fields": ["title^2", "chunk_text"]
+        }
+    }
 
 
 def search(client: OpenSearch, question: str, top_k: int, index: str) -> list[SearchHit]:
     resp = client.search(
         index=index,
-        body={"query": _chunk_text_match(question), "size": top_k},
+        body={"query": query_match(question), "size": top_k},
     )
     hits = []
     for rank, hit in enumerate(resp["hits"]["hits"], start=1):
@@ -56,7 +61,7 @@ def highlight_document(client: OpenSearch, query: str, doc_id: str, index: str) 
             "query": {
                 "bool": {
                     "filter": [{"term": {"_id": doc_id}}],
-                    "should": [_chunk_text_match(query)],
+                    "should": [query_match(query)],
                     "minimum_should_match": 0,
                 }
             },
