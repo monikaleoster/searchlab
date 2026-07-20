@@ -491,6 +491,49 @@ See updated Definition of Done below.
 
 ---
 
+## Group 14 — Amendment 7: Zero-Value Metric Counts (2026-07-17)
+
+Extends Group 13's aggregate summary block. No new endpoint — reuses the `scores_a`/`scores_b`
+`per_query` dicts that `compare_ir`/`compare_rag` already load in full (Group 1.4/1.5). This is a
+per-run count, computed the same way `aggregate_a`/`aggregate_b` are: over that run's own
+`per_query` dict, not just the rows shared with the other run — a run's zero-count is a property
+of that run alone, so an `only_in_a`/`only_in_b` row still counts toward its own run's total.
+
+### 14.1 Backend: per-run zero counts
+
+**Where:** `service/searchlab/web/compare.py`
+
+- Add `_zero_counts(per_query: dict, measures: list[str]) -> dict` — for each measure in
+  `measures`, counts how many entries in `per_query` have that measure present and equal to `0`
+  (`== 0`, not falsy/`None` — a missing metric for a query is not the same signal as a scored
+  zero, so `None`/absent values are skipped, not counted).
+- In `compare_ir`, call `_zero_counts(pq_a, measures)` / `_zero_counts(pq_b, measures)` right
+  after `aggregate_delta` is computed (near line 135), producing `zero_counts_a` /
+  `zero_counts_b`.
+- In `compare_rag`, same call using `pq_a` / `pq_b` (near line 203) — these are already the full
+  `rag_scores.json` `per_query` dicts (keyed `"0"`, `"1"`, …), so no change to how RAG's
+  positional join works; the zero-count is independent of the A/B join.
+- Add `zero_counts_a`, `zero_counts_b` to the dict returned by both functions, alongside the
+  existing `aggregate_a` / `aggregate_b` / `aggregate_delta` keys (near lines 187–189 and
+  264–266).
+
+### 14.2 Frontend: zero-count columns in the aggregate summary block
+
+**Where:** `service/searchlab/web/html.py`
+
+- Extend the aggregate table header (`html.py:405`) with two more columns:
+  `<th>Measure</th><th>A</th><th>B</th><th>Δ</th><th>Zero in A</th><th>Zero in B</th>`.
+- In `renderCompareAggregate` (`html.py:1091`), append `zero_counts_a`/`zero_counts_b` lookups
+  per measure and two more `<td>`s per row: plain counts, no color coding (a zero-count is not a
+  delta, so `deltaCls`/`metricCls` don't apply — render as plain text, falling back to `0` if the
+  measure key is absent from the dict).
+- Same visibility rule as the rest of the aggregate block (Group 13.2): always shows all shared
+  measures, unaffected by the per-query metric-column filter (`cmpMetricFilter`) or the
+  improved/regressed row filter (`cmpRowFilter`) — this block summarizes the whole run pair, not
+  a filtered row subset.
+
+---
+
 ## Definition of Done
 
 - [ ] `GET /api/eval/compare` works for both `type=ir` and `type=rag`
@@ -543,3 +586,9 @@ See updated Definition of Done below.
       active metric's delta (metric-dropdown selection, or the type's primary measure when on
       "All metrics"), using the existing grey-zone threshold; only-in-A/only-in-B sections are
       unaffected in every filter state; switching the metric dropdown re-evaluates an active filter
+- [ ] `/api/eval/compare` includes `zero_counts_a`/`zero_counts_b` for both `type=ir` and
+      `type=rag`, counting each run's own `per_query` entries per shared measure equal to exactly
+      `0` (missing/`None` values excluded, not counted as zero)
+- [ ] Aggregate summary block shows "Zero in A" / "Zero in B" columns per measure alongside the
+      existing A/B/Δ columns, unaffected by the metric-column filter and the improved/regressed
+      row filter

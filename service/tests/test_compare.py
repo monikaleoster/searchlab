@@ -141,6 +141,28 @@ def test_compare_ir_computes_aggregate_delta(tmp_path):
     assert result["aggregate_delta"]["recall_10"] == pytest.approx(-0.1)
 
 
+def test_compare_ir_computes_zero_counts_per_run(tmp_path):
+    _write(tmp_path, "run-a", "ir_scores.json", _ir_scores(
+        per_query={
+            "Q1": {"ndcg_cut_10": 0.0, "recall_10": 0.4},
+            "Q2": {"ndcg_cut_10": 0.0, "recall_10": 0.0},
+            "Q3": {"ndcg_cut_10": 0.5, "recall_10": None},
+        },
+    ))
+    _write(tmp_path, "run-b", "ir_scores.json", _ir_scores(
+        per_query={
+            "Q1": {"ndcg_cut_10": 0.8, "recall_10": 0.0},
+            "Q2": {"ndcg_cut_10": 0.0, "recall_10": 0.4},
+            "Q3": {"ndcg_cut_10": 0.5, "recall_10": 0.4},
+        },
+    ))
+
+    result = compare.compare_ir("run-a", "run-b")
+
+    assert result["zero_counts_a"] == {"ndcg_cut_10": 2, "recall_10": 1}
+    assert result["zero_counts_b"] == {"ndcg_cut_10": 1, "recall_10": 1}
+
+
 def test_compare_ir_dataset_mismatch_raises_value_error(tmp_path):
     _write(tmp_path, "run-a", "ir_scores.json", _ir_scores(dataset="nfcorpus"))
     _write(tmp_path, "run-b", "ir_scores.json", _ir_scores(dataset="fiqa"))
@@ -236,6 +258,34 @@ def test_compare_rag_computes_aggregate_delta(tmp_path):
     assert result["aggregate_b"] == {"faithfulness": 0.9, "answer_relevancy": 0.4}
     assert result["aggregate_delta"]["faithfulness"] == pytest.approx(0.4)
     assert result["aggregate_delta"]["answer_relevancy"] == pytest.approx(-0.2)
+
+
+def test_compare_rag_computes_zero_counts_per_run(tmp_path):
+    _write(tmp_path, "run-a", "rag_scores.json", _rag_scores(
+        per_query={
+            "0": {"faithfulness": 0.0, "answer_relevancy": 0.6},
+            "1": {"faithfulness": 0.0, "answer_relevancy": None},
+        },
+    ))
+    _write(tmp_path, "run-a", "rag_results.json", _rag_results([
+        {"query_id": "Q1", "question": "q1?", "answer": "a1", "contexts": [], "ground_truth": None},
+        {"query_id": "Q2", "question": "q2?", "answer": "a2", "contexts": [], "ground_truth": None},
+    ]))
+    _write(tmp_path, "run-b", "rag_scores.json", _rag_scores(
+        per_query={
+            "0": {"faithfulness": 0.9, "answer_relevancy": 0.0},
+            "1": {"faithfulness": 0.0, "answer_relevancy": 0.0},
+        },
+    ))
+    _write(tmp_path, "run-b", "rag_results.json", _rag_results([
+        {"query_id": "Q1", "question": "q1?", "answer": "b1", "contexts": [], "ground_truth": None},
+        {"query_id": "Q2", "question": "q2?", "answer": "b2", "contexts": [], "ground_truth": None},
+    ]))
+
+    result = compare.compare_rag("run-a", "run-b")
+
+    assert result["zero_counts_a"] == {"faithfulness": 2, "answer_relevancy": 0}
+    assert result["zero_counts_b"] == {"faithfulness": 1, "answer_relevancy": 2}
 
 
 def test_compare_rag_dataset_mismatch_raises_value_error(tmp_path):
