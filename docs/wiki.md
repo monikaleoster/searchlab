@@ -713,14 +713,26 @@ that caused it, instead of eyeballing two separate JSON files or Metrics-tab loa
     missing a comparable delta show only under "All". Switching the Metric dropdown while a filter
     is active re-evaluates it against the newly selected measure. The only-in-A/only-in-B sections
     have no Run A/B delta to judge and are unaffected in every filter state.
+15. `/api/eval/compare` also returns `zero_counts_a`/`zero_counts_b` — one entry per shared
+    measure, counting how many entries in that run's own `per_query` dict have that measure
+    present and exactly equal to `0` (a missing/`None` value for a query is a different signal
+    than a scored zero, so it's skipped, not counted). This is a per-run count over the full
+    `per_query` dict, not just the rows shared between the two runs, so an only-in-A/only-in-B
+    query still counts toward its own run's total. No new endpoint — reuses the `per_query` dicts
+    already loaded for item 14's aggregate. The aggregate summary block gets two more columns,
+    "Zero in A" / "Zero in B", rendered as plain counts (no delta color coding, since a count isn't
+    a delta) alongside the existing measure/A/B/Δ columns; same visibility rule as the rest of the
+    block — always all shared measures, unaffected by the Metric dropdown (item 8) and the
+    Improved/Regressed filter (item 14).
 
 **Classes/functions involved:** `compare_ir`, `compare_rag`, `load_ir_scores`,
 `load_rag_scores`, `load_rag_results`, `load_raw_results`, `load_document`, `load_qrels`,
-`_load_queries` (all in `web/compare.py`); `highlight_document` (in `search/bm25_searcher.py`);
-`ensureJudgementLoaded`, `sourceRank`, `retrievedMark`, `judgedMark` (client-side cross-reference
-helpers in `web/html.py`, item 13 — no backend counterpart); `renderCompareAggregate`,
-`passesRowFilter`, `activeFilterMetric` (client-side aggregate block and row filter, item 14 — no
-backend counterpart beyond the additive `aggregate_*` fields)
+`_load_queries`, `_zero_counts` (all in `web/compare.py`); `highlight_document` (in
+`search/bm25_searcher.py`); `ensureJudgementLoaded`, `sourceRank`, `retrievedMark`, `judgedMark`
+(client-side cross-reference helpers in `web/html.py`, item 13 — no backend counterpart);
+`renderCompareAggregate`, `passesRowFilter`, `activeFilterMetric` (client-side aggregate block and
+row filter, item 14 — no backend counterpart beyond the additive `aggregate_*` fields); item 15
+adds no new client-side helper, just two more columns in `renderCompareAggregate`
 
 **External services:** mostly none — reads only the JSON files `searchlab-eval` already wrote
 under `searchlab-eval/results/<run_id>/`, plus the static `queries.jsonl`/`corpus.jsonl`/
@@ -1175,6 +1187,8 @@ GET /api/eval/compare?type=ir&runA=nfcorpus-20260619T200023Z&runB=nfcorpus-20260
   "aggregate_a": {"ndcg_cut_10": 0.42, "recall_10": 0.55},
   "aggregate_b": {"ndcg_cut_10": 0.47, "recall_10": 0.55},
   "aggregate_delta": {"ndcg_cut_10": 0.05, "recall_10": 0.0},
+  "zero_counts_a": {"ndcg_cut_10": 3, "recall_10": 1},
+  "zero_counts_b": {"ndcg_cut_10": 2, "recall_10": 1},
   "rows": [
     {
       "query_id": "PLAIN-2",
@@ -1200,6 +1214,12 @@ that file is missing (the comparison still succeeds).
 summary block renders, and also what the improved/regressed row filter falls back to
 (`ndcg_cut_10` for IR, `faithfulness` for RAG) when the per-query Metric dropdown is on "All
 metrics".
+
+`zero_counts_a`/`zero_counts_b` count, per shared measure, how many entries in that run's own
+`per_query` dict score exactly `0` for that measure (a missing/`None` value is not counted). This
+is computed over the whole run, not just rows shared with the other run — an only-in-A/only-in-B
+query still counts toward its own run's total. Rendered as the "Zero in A" / "Zero in B" columns
+in the Compare tab's aggregate summary block, alongside measure/A/B/Δ.
 
 **Response (success, RAG):** same shape, but rows are keyed by list position (`index`) with
 `content_a` / `content_b` (`question`/`answer`/`contexts`/`ground_truth`) instead of

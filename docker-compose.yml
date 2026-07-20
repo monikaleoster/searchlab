@@ -1,5 +1,6 @@
 version: "3.8"
 
+
 # DEV ONLY — single-node, security disabled. Do NOT use this in production.
 services:
   opensearch:

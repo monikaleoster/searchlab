@@ -425,6 +425,36 @@ surfaces that existing data rather than computing anything new.
 
 ---
 
+## Amendment 7 (2026-07-17): Zero-value metric counts
+
+A seventh refinement. A query scoring exactly `0` on a measure (e.g. `ndcg_cut_10 == 0`, meaning
+nothing relevant was retrieved at all) is a qualitatively different failure than a query that
+merely regressed — it's a complete miss. The per-query table already lets a user find individual
+zero-scoring rows by sorting or filtering, but there was no quick way to see *how many* zero
+scores each run has for a given measure without counting rows by hand. Both `ir_scores.json` and
+`rag_scores.json` already carry the full `per_query` dict this count is computed from — this
+amendment adds a derived count, not new source data.
+
+- `/api/eval/compare` gains two additive top-level fields — `zero_counts_a`, `zero_counts_b` —
+  one entry per shared measure, counting how many entries in that run's own `per_query` dict have
+  that measure present and equal to exactly `0`. A missing or `None` value for a measure is not
+  counted (a query that wasn't scored is a different signal than a query that scored zero).
+- This is a per-run count over that run's **entire** `per_query` dict, not just the rows shared
+  with the other run — an only-in-A or only-in-B query still counts toward its own run's total,
+  consistent with the count being a property of one run, not of the comparison join.
+- The Compare tab's aggregate summary block (Amendment 6) gains two more columns, "Zero in A" /
+  "Zero in B", shown as plain counts (no delta color coding — a count isn't a delta) next to the
+  existing measure/A/B/Δ columns. Same visibility rule as the rest of that block: always shows all
+  shared measures, unaffected by the per-query metric-column filter (F11) and the
+  improved/regressed row filter (F23).
+- No new endpoint. No change to `ir_scores.json` / `rag_scores.json`.
+
+| # | Requirement |
+|---|-------------|
+| F25 | `/api/eval/compare` response includes `zero_counts_a`, `zero_counts_b` — one entry per shared measure, counting each run's own `per_query` entries where that measure is present and equal to exactly `0` (missing/`None` values excluded). Applies to both IR and RAG. The Compare tab's aggregate summary block shows these as "Zero in A"/"Zero in B" columns, unaffected by the metric-column filter or the improved/regressed row filter. |
+
+---
+
 ## Out of Scope
 
 | Item | Notes |

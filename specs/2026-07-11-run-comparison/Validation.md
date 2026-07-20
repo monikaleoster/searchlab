@@ -35,6 +35,7 @@
 | AC24 | `/api/eval/compare` includes `aggregate_a`/`aggregate_b`/`aggregate_delta` for both IR and RAG | Values match each run's own `aggregate` dict in `ir_scores.json`/`rag_scores.json` for every shared measure; `aggregate_delta[m] == aggregate_b[m] - aggregate_a[m]` | Missing fields, values not matching the source JSON, or wrong sign |
 | AC25 | Compare tab renders an aggregate summary block above the per-query table | Shows measure / A / B / Δ for every shared measure, colored with the same convention as per-query Δ cells; stays showing all measures when the per-query metric-column filter (F11) is narrowed to one metric | Block missing, wrong values, or it gets narrowed by the per-query metric filter instead of staying independent |
 | AC26 | "All / Improved in B / Regressed in B" toggle filters the main table correctly | Selecting "Improved in B" shows only rows where the active metric's delta is `> 0.01`; "Regressed in B" shows only rows with delta `< -0.01`; rows in the grey zone or without a comparable delta appear only under "All"; only-in-A/only-in-B sections stay fully visible in every filter state; switching the metric-column dropdown while a filter is active re-evaluates it against the new metric | Wrong rows included/excluded, threshold not matching the existing grey-zone constant, only-in-A/B sections affected by the toggle, or filter not re-evaluating on metric-dropdown change |
+| AC27 | `/api/eval/compare` includes `zero_counts_a`/`zero_counts_b` for both IR and RAG | Values match, per shared measure, a hand-count of that run's own `per_query` entries scoring exactly `0` for that measure (missing/`None` values excluded); an only-in-A/only-in-B query still counts toward its own run's total; aggregate summary block shows "Zero in A"/"Zero in B" columns with these counts, unaffected by the metric-column filter and the improved/regressed row filter | Missing fields, wrong counts (e.g. `None` counted as zero, or count restricted to shared rows only), or columns affected by either filter |
 
 ---
 
@@ -218,14 +219,29 @@ Check: all behave exactly as before; no console errors; no layout shift from the
 - Run a RAG comparison (as in step 2) and repeat the aggregate-block and filter checks against
   `faithfulness`/`answer_relevancy` (and `context_recall`/`context_precision` if present).
 
+### 15. Zero-value metric counts (amendment 7, 2026-07-17)
+
+- Run an IR comparison (as in step 1) against two runs where at least one query scores exactly
+  `0` on some measure for each run. Confirm the aggregate summary block shows "Zero in A" /
+  "Zero in B" columns, and hand-count the `0`-scoring queries in each run's `ir_scores.json`
+  `per_query` dict for one measure to confirm the numbers match.
+- Confirm a query with a missing/`None` value for a measure is not counted toward that measure's
+  zero count (distinguish from an actual scored `0`).
+- Confirm an only-in-A (or only-in-B) query that scores `0` on a measure still counts toward its
+  own run's "Zero in A"/"Zero in B" total (the count is per-run, not restricted to shared rows).
+- Narrow the per-query metric-column dropdown to a single measure and switch the improved/
+  regressed filter — confirm the "Zero in A"/"Zero in B" columns are unaffected by either.
+- Run a RAG comparison (as in step 2) and repeat the zero-count check against
+  `faithfulness`/`answer_relevancy`.
+
 ---
 
 ## Merge Checklist
 
 > A phase is done or it is in progress. There is no "almost done." — Constitution § X
 
-- [ ] AC1–AC26 all pass.
-- [ ] Manual verification steps 1–14 completed; pass/fail noted for each.
+- [ ] AC1–AC27 all pass.
+- [ ] Manual verification steps 1–15 completed; pass/fail noted for each.
 - [ ] `compare_ir` / `compare_rag` covered by unit tests: matched rows, only-in-A/B, dataset
       mismatch (`ValueError`), missing run (`FileNotFoundError`), `query_text` attachment,
       RAG question-mismatch flagging.
@@ -236,6 +252,8 @@ Check: all behave exactly as before; no console errors; no layout shift from the
       flagging.
 - [ ] `compare_ir` / `compare_rag` unit tests cover `aggregate_a`/`aggregate_b`/`aggregate_delta`
       computation against each run's own `aggregate` dict.
+- [ ] `compare_ir` / `compare_rag` unit tests cover `zero_counts_a`/`zero_counts_b` computation:
+      `None`/missing values excluded, counts computed over each run's own full `per_query` dict.
 - [ ] `highlight_document` covered by unit tests: hit with highlighted terms, hit with no term
       overlap (empty fragments, not an error), doc not in index (`FileNotFoundError`).
 - [ ] `GET /api/eval/highlight` covered: 200 with fragments, 200 with empty fragments, 404 on

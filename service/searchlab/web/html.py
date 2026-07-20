@@ -402,7 +402,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <div class="card" id="cmp-agg-card">
       <div class="card-title">Aggregate</div>
       <table id="cmp-agg-table">
-        <thead><tr><th>Measure</th><th>A</th><th>B</th><th>Δ</th></tr></thead>
+        <thead><tr><th>Measure</th><th>A</th><th>B</th><th>Δ</th><th>Zero in A</th><th>Zero in B</th></tr></thead>
         <tbody id="cmp-agg-tbody"></tbody>
       </table>
     </div>
@@ -1093,10 +1093,12 @@ function renderCompareAggregate(data) {
   const measures = data.measures || [];
   document.getElementById('cmp-agg-tbody').innerHTML = measures.map(m => {
     const va = data.aggregate_a?.[m], vb = data.aggregate_b?.[m], d = data.aggregate_delta?.[m];
+    const za = data.zero_counts_a?.[m] ?? 0, zb = data.zero_counts_b?.[m] ?? 0;
     return `<tr><td>${esc(metricLabel(m))}</td>` +
       `<td class="${va != null ? metricCls(va) : 'metric-lo'}">${fmt(va)}</td>` +
       `<td class="${vb != null ? metricCls(vb) : 'metric-lo'}">${fmt(vb)}</td>` +
-      `<td class="${deltaCls(d)}">${d != null ? (d >= 0 ? '+' : '') + d.toFixed(3) : '-'}</td></tr>`;
+      `<td class="${deltaCls(d)}">${d != null ? (d >= 0 ? '+' : '') + d.toFixed(3) : '-'}</td>` +
+      `<td>${za}</td><td>${zb}</td></tr>`;
   }).join('');
 }
 
