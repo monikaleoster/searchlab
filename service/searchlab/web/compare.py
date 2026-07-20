@@ -125,6 +125,13 @@ def _delta(a_metrics: dict, b_metrics: dict, measures: list[str]) -> dict:
     }
 
 
+def _zero_counts(per_query: dict, measures: list[str]) -> dict:
+    return {
+        m: sum(1 for entry in per_query.values() if entry.get(m) == 0)
+        for m in measures
+    }
+
+
 def compare_ir(run_a: str, run_b: str) -> dict:
     scores_a = load_ir_scores(run_a)
     scores_b = load_ir_scores(run_b)
@@ -136,6 +143,8 @@ def compare_ir(run_a: str, run_b: str) -> dict:
 
     pq_a = scores_a.get("per_query", {})
     pq_b = scores_b.get("per_query", {})
+    zero_counts_a = _zero_counts(pq_a, measures)
+    zero_counts_b = _zero_counts(pq_b, measures)
 
     raw_a = load_raw_results(run_a)
     raw_b = load_raw_results(run_b)
@@ -187,6 +196,8 @@ def compare_ir(run_a: str, run_b: str) -> dict:
         "aggregate_a": aggregate_a,
         "aggregate_b": aggregate_b,
         "aggregate_delta": aggregate_delta,
+        "zero_counts_a": zero_counts_a,
+        "zero_counts_b": zero_counts_b,
         "rows": rows,
         "only_in_a": only_in_a,
         "only_in_b": only_in_b,
@@ -204,6 +215,8 @@ def compare_rag(run_a: str, run_b: str) -> dict:
 
     pq_a = scores_a.get("per_query", {})
     pq_b = scores_b.get("per_query", {})
+    zero_counts_a = _zero_counts(pq_a, measures)
+    zero_counts_b = _zero_counts(pq_b, measures)
     results_a = load_rag_results(run_a).get("per_query", [])
     results_b = load_rag_results(run_b).get("per_query", [])
 
@@ -264,6 +277,8 @@ def compare_rag(run_a: str, run_b: str) -> dict:
         "aggregate_a": aggregate_a,
         "aggregate_b": aggregate_b,
         "aggregate_delta": aggregate_delta,
+        "zero_counts_a": zero_counts_a,
+        "zero_counts_b": zero_counts_b,
         "rows": rows,
         "only_in_a": only_in_a,
         "only_in_b": only_in_b,
